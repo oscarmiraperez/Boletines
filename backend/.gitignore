@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.env
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Generated Docs
+generated_docs/*
+!generated_docs/.gitkeep
+
+# Temp Files
+*.pdf
+*.db
+prisma/*.db
+temp_output/
+Test_output/

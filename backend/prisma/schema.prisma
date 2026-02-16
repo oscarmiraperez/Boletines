@@ -1,0 +1,193 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  isActive  Boolean  @default(true)
+  role      String   @default("TECNICO") // Changed from Enum to String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expedientesOperador Expediente[] @relation("OperadorExpediente")
+  expedientesTecnico  Expediente[] @relation("TecnicoExpediente")
+}
+
+model Client {
+  id            String         @id @default(uuid())
+  name          String
+  nif           String
+  phone         String?
+  email         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  mtdData       String?        // Changed from Json to String
+  installations Installation[]
+}
+
+model Installation {
+  id               String      @id @default(uuid())
+  clientId         String
+  client           Client      @relation(fields: [clientId], references: [id])
+  address          String
+  municipality     String
+  postalCode       String
+  cups             String?
+  contractedPower  Float?
+  retailer         String? // Comercializadora
+  distributor      String? // Distribuidora
+  tariff           String?
+  observations     String?
+  expedientes      Expediente[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model Expediente {
+  id              String           @id @default(uuid())
+  code            String           @unique // Internal code
+  status          String           @default("SIN_VISITAR") // Changed from Enum
+  type            String // Alta, Modificacion, etc.
+  isDeleted       Boolean          @default(false)
+  
+  operatorId      String
+  operator        User             @relation("OperadorExpediente", fields: [operatorId], references: [id])
+  
+  technicalId     String?
+  technical       User?            @relation("TecnicoExpediente", fields: [technicalId], references: [id])
+
+  installationId  String
+  installation    Installation     @relation(fields: [installationId], references: [id])
+
+  visitDate       DateTime?
+  gvaRegisterNum  String?
+  presentationDate DateTime?
+
+  // Relations to technical data
+  authorization   Authorization?
+  derivacion      DerivacionIndividual?
+  cuadros         Cuadro[]
+  verificaciones  Verificacion?
+  documents       Document[]
+
+  mtdData         String?      // Changed from Json to String
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Authorization {
+  id              String     @id @default(uuid())
+  expedienteId    String     @unique
+  expediente      Expediente @relation(fields: [expedienteId], references: [id])
+  
+  signaturePath   String?    // Path to signature image
+  idCardPath      String?    // Path to DNI photo
+  signedAt        DateTime?
+  latitude        Float?
+  longitude       Float?
+  pdfPath         String?    // Generated PDF
+}
+
+model DerivacionIndividual {
+  id              String            @id @default(uuid())
+  expedienteId    String            @unique
+  expediente      Expediente        @relation(fields: [expedienteId], references: [id])
+  
+  section         Float // mm2
+  material        String            // Changed from Enum
+  insulation      String // RZ1-K, etc.
+  channeling      String
+  description     String?
+  
+  photos          DerivacionPhoto[]
+}
+
+model DerivacionPhoto {
+  id              String               @id @default(uuid())
+  derivacionId    String
+  derivacion      DerivacionIndividual @relation(fields: [derivacionId], references: [id])
+  url             String
+  type            String // 'counter_entry', 'critical_point_1', etc.
+}
+model Cuadro {
+  id              String           @id @default(uuid())
+  expedienteId    String
+  expediente      Expediente       @relation(fields: [expedienteId], references: [id])
+  name            String
+  description     String?
+  
+  photoFrontal    String?
+  photoInterior   String?
+  
+  mainBreaker     MainBreaker?
+  differentials   Differential[]
+  circuits        Circuit[]
+}
+
+model MainBreaker { // Automatico General
+  id              String @id @default(uuid())
+  cuadroId        String @unique
+  cuadro          Cuadro @relation(fields: [cuadroId], references: [id])
+  poles           Int
+  amperage        Float
+}
+
+model Differential {
+  id              String    @id @default(uuid())
+  cuadroId        String
+  cuadro          Cuadro    @relation(fields: [cuadroId], references: [id])
+  poles           Int
+  amperage        Float
+  sensitivity     Float // mA
+  description     String?
+  
+  circuits        Circuit[] // Circuits protected by this differential
+}
+
+model Circuit { // Magnetotermico
+  id              String       @id @default(uuid())
+  cuadroId        String
+  cuadro          Cuadro       @relation(fields: [cuadroId], references: [id])
+  
+  differentialId  String?
+  differential    Differential? @relation(fields: [differentialId], references: [id])
+  
+  poles           Int
+  amperage        Float
+  description     String // Use/Location
+}
+
+model Verificacion {
+  id              String     @id @default(uuid())
+  expedienteId    String     @unique
+  expediente      Expediente @relation(fields: [expedienteId], references: [id])
+  
+  continuity      String?
+  insulation      String?
+  earthResistance String? // Ohms
+  differentialTrip String?
+  notes           String?
+}
+
+model Document {
+  id              String     @id @default(uuid())
+  expedienteId    String
+  expediente      Expediente @relation(fields: [expedienteId], references: [id])
+  
+  type            String // MTD, SCHEMATIC, AUTH, PHOTO_ZIP
+  path            String
+  createdAt       DateTime   @default(now())
+}
