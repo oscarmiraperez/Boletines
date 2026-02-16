@@ -56,9 +56,27 @@ export const login = async (req: Request, res: Response) => {
 
 };
 
+import { exec } from 'child_process';
+import util from 'util';
+
+const execPromise = util.promisify(exec);
+
 export const initAdmin = async (req: Request, res: Response) => {
     try {
         console.log('--- Initializing Admin User ---');
+
+        // 0. Run Migrations (Create Tables)
+        try {
+            console.log('Running functionality migrations...');
+            // We use npx prisma migrate deploy to apply existing migrations
+            const { stdout, stderr } = await execPromise('npx prisma migrate deploy');
+            console.log('Migration output:', stdout);
+            if (stderr) console.error('Migration stderr:', stderr);
+        } catch (migrationError: any) {
+            console.error('Migration failed:', migrationError);
+            // Continue anyway, maybe tables exist
+        }
+
         // 1. Create default admin if not exists
         const email = 'admin@test.com';
         const password = 'password';
