@@ -114,8 +114,8 @@ export const initAdmin = async (req: Request, res: Response) => {
             if (upsertError.message.includes('does not exist') || upsertError.message.includes('relation') || upsertError.message.includes('P2021')) {
                 log('CRITICAL: Tables are missing. Attempting emergency database push...');
                 try {
-                    log('Running: npx prisma db push --skip-generate');
-                    const { stdout, stderr } = await execPromise('npx prisma db push --skip-generate');
+                    log('Running: npx --yes prisma db push --accept-data-loss --skip-generate');
+                    const { stdout, stderr } = await execPromise('npx --yes prisma db push --accept-data-loss --skip-generate', { timeout: 20000 });
                     log('DB Push stdout: ' + stdout);
                     if (stderr) log('DB Push stderr: ' + stderr);
 
