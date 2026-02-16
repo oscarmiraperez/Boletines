@@ -64,6 +64,9 @@ export const initAdmin = async (req: Request, res: Response) => {
         debugLogs.push(msg);
     };
 
+    // Helper: Timeout Promise
+    const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('Operation timed out')), ms));
+
     try {
         log('--- Initializing Admin User (Debug Mode) ---');
 
@@ -71,41 +74,49 @@ export const initAdmin = async (req: Request, res: Response) => {
         const dbUrl = process.env.DATABASE_URL;
         log(`DATABASE_URL exists: ${!!dbUrl}`);
         if (dbUrl) {
-            log(`DATABASE_URL prefix: ${dbUrl.substring(0, 15)}...`);
+            // Log structure but hide password
+            const sanitizedUrl = dbUrl.replace(/:([^@]+)@/, ':****@');
+            log(`DATABASE_URL: ${sanitizedUrl}`);
         } else {
             throw new Error('DATABASE_URL is missing in environment variables!');
         }
 
-        // 2. Check DB Connection
-        log('Attempting DB connection via prisma.$queryRaw...');
+        // 2. Check DB Connection with TIMEOUT
+        log('Attempting DB connection via prisma.$queryRaw (5s timeout)...');
         try {
-            await prisma.$queryRaw`SELECT 1`;
+            await Promise.race([
+                prisma.$queryRaw`SELECT 1`,
+                timeout(5000)
+            ]);
             log('DB Connection OK');
         } catch (dbError: any) {
             log(`DB Connection Failed: ${dbError.message}`);
-            throw new Error(`Database connection failed: ${dbError.message}`);
+            // Force error to be thrown to catch block
+            throw new Error(`Database connection failed/timed out: ${dbError.message}`);
         }
 
-        // 3. Create User
-        log('Attempting to create/update admin user...');
+        // 3. Create User with TIMEOUT
+        log('Attempting to create/update admin user (5s timeout)...');
         const email = 'admin@test.com';
         const password = 'password';
 
         log('Hashing password...');
         const hashedPassword = await bcrypt.hash(password, 10);
-        log('Password hashed.');
 
-        log('Upserting user to database...');
-        const user = await prisma.user.upsert({
-            where: { email },
-            update: {},
-            create: {
-                email,
-                password: hashedPassword,
-                name: 'Admin',
-                role: 'ADMIN',
-            },
-        });
+        log('Upserting user...');
+        const user: any = await Promise.race([
+            prisma.user.upsert({
+                where: { email },
+                update: {},
+                create: {
+                    email,
+                    password: hashedPassword,
+                    name: 'Admin',
+                    role: 'ADMIN',
+                },
+            }),
+            timeout(5000)
+        ]);
         log(`User created/found: ${user.id}`);
 
         res.json({
