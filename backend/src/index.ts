@@ -17,6 +17,26 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from frontend build (Production & Preview)
 // We use __dirname to be relative to the built file (backend/dist/index.js or backend/src/index.ts)
 const frontendPath = path.join(__dirname, '../../frontend/dist');
+console.log('--- DEBUG PATHS ---');
+console.log('__dirname:', __dirname);
+console.log('process.cwd():', process.cwd());
+console.log('Calculated frontendPath:', frontendPath);
+
+import fs from 'fs';
+if (fs.existsSync(frontendPath)) {
+    console.log('Frontend path EXISTS.');
+    console.log('Contents:', fs.readdirSync(frontendPath));
+} else {
+    console.error('Frontend path DOES NOT EXIST!');
+    // Try to list parent dirs to see where we are
+    try {
+        console.log('Parent dir contents:', fs.readdirSync(path.join(__dirname, '../../')));
+    } catch (e) {
+        console.log('Could not list parent dir');
+    }
+}
+console.log('-------------------');
+
 app.use(express.static(frontendPath));
 
 // Serve uploaded files
