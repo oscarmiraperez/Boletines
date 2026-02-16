@@ -58,23 +58,44 @@ export const login = async (req: Request, res: Response) => {
 
 
 export const initAdmin = async (req: Request, res: Response) => {
-    try {
-        console.log('--- Initializing Admin User ---');
+    const debugLogs: string[] = [];
+    const log = (msg: string) => {
+        console.log(msg);
+        debugLogs.push(msg);
+    };
 
-        // Check DB connection first
-        try {
-            await prisma.$queryRaw`SELECT 1`;
-            console.log('DB Connection OK');
-        } catch (dbError) {
-            console.error('DB Connection Failed:', dbError);
-            return res.status(500).json({ error: 'Database connection failed', details: dbError });
+    try {
+        log('--- Initializing Admin User (Debug Mode) ---');
+
+        // 1. Check Environment
+        const dbUrl = process.env.DATABASE_URL;
+        log(`DATABASE_URL exists: ${!!dbUrl}`);
+        if (dbUrl) {
+            log(`DATABASE_URL prefix: ${dbUrl.substring(0, 15)}...`);
+        } else {
+            throw new Error('DATABASE_URL is missing in environment variables!');
         }
 
-        // 1. Create default admin if not exists
+        // 2. Check DB Connection
+        log('Attempting DB connection via prisma.$queryRaw...');
+        try {
+            await prisma.$queryRaw`SELECT 1`;
+            log('DB Connection OK');
+        } catch (dbError: any) {
+            log(`DB Connection Failed: ${dbError.message}`);
+            throw new Error(`Database connection failed: ${dbError.message}`);
+        }
+
+        // 3. Create User
+        log('Attempting to create/update admin user...');
         const email = 'admin@test.com';
         const password = 'password';
-        const hashedPassword = await bcrypt.hash(password, 10);
 
+        log('Hashing password...');
+        const hashedPassword = await bcrypt.hash(password, 10);
+        log('Password hashed.');
+
+        log('Upserting user to database...');
         const user = await prisma.user.upsert({
             where: { email },
             update: {},
@@ -85,10 +106,24 @@ export const initAdmin = async (req: Request, res: Response) => {
                 role: 'ADMIN',
             },
         });
+        log(`User created/found: ${user.id}`);
 
-        res.json({ message: 'Admin user initialized', user: { email: user.email, role: user.role } });
+        res.json({
+            success: true,
+            message: 'Admin user initialized successfully',
+            user: { email: user.email, role: user.role },
+            logs: debugLogs
+        });
+
     } catch (error: any) {
-        console.error('Init Admin Error:', error);
-        res.status(500).json({ error: 'Error initializing admin', details: error.message });
+        console.error('Init Admin Fatal Error:', error);
+        // Return 200 to ensure the user can SEE the error in the browser
+        res.status(200).json({
+            success: false,
+            error: 'CRITICAL FAILURE',
+            message: error.message,
+            stack: error.stack,
+            logs: debugLogs
+        });
     }
 };
