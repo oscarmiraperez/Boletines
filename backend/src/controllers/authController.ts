@@ -2,6 +2,10 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../db';
+import { exec } from 'child_process';
+import util from 'util';
+
+const execPromise = util.promisify(exec);
 
 export const register = async (req: Request, res: Response) => {
     try {
@@ -68,20 +72,19 @@ export const initAdmin = async (req: Request, res: Response) => {
     const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('Operation timed out')), ms));
 
     try {
-        log('--- Initializing Admin User (Debug Mode) ---');
+        log('--- Initializing Admin User (Debug Mode with Auto-Repair) ---');
 
         // 1. Check Environment
         const dbUrl = process.env.DATABASE_URL;
         log(`DATABASE_URL exists: ${!!dbUrl}`);
         if (dbUrl) {
-            // Log structure but hide password
             const sanitizedUrl = dbUrl.replace(/:([^@]+)@/, ':****@');
             log(`DATABASE_URL: ${sanitizedUrl}`);
         } else {
             throw new Error('DATABASE_URL is missing in environment variables!');
         }
 
-        // 2. Check DB Connection with TIMEOUT
+        // 2. Check DB Connection
         log('Attempting DB connection via prisma.$queryRaw (5s timeout)...');
         try {
             await Promise.race([
@@ -91,44 +94,54 @@ export const initAdmin = async (req: Request, res: Response) => {
             log('DB Connection OK');
         } catch (dbError: any) {
             log(`DB Connection Failed: ${dbError.message}`);
-            // Force error to be thrown to catch block
-            throw new Error(`Database connection failed/timed out: ${dbError.message}`);
+            // Force continue only if it's NOT a timeout, maybe we can fix it?
+            // Actually continue to try push if needed
         }
 
-        // 3. Create User with TIMEOUT
-        log('Attempting to create/update admin user (5s timeout)...');
+        // 3. Create User with Auto-Repair
+        log('Attempting to create/update admin user...');
         const email = 'admin@test.com';
         const password = 'password';
-
-        log('Hashing password...');
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        log('Upserting user...');
-        const user: any = await Promise.race([
-            prisma.user.upsert({
-                where: { email },
-                update: {},
-                create: {
-                    email,
-                    password: hashedPassword,
-                    name: 'Admin',
-                    role: 'ADMIN',
-                },
-            }),
-            timeout(5000)
-        ]);
-        log(`User created/found: ${user.id}`);
+        try {
+            await upsertAdmin(email, hashedPassword, 5000);
+            log('User created successfully on first try.');
+        } catch (upsertError: any) {
+            log(`First attempt failed: ${upsertError.message}`);
+
+            // Check if error is about missing table
+            if (upsertError.message.includes('does not exist') || upsertError.message.includes('relation') || upsertError.message.includes('P2021')) {
+                log('CRITICAL: Tables are missing. Attempting emergency database push...');
+                try {
+                    log('Running: npx prisma db push --skip-generate');
+                    const { stdout, stderr } = await execPromise('npx prisma db push --skip-generate');
+                    log('DB Push stdout: ' + stdout);
+                    if (stderr) log('DB Push stderr: ' + stderr);
+
+                    log('Retrying user creation after DB push...');
+                    await upsertAdmin(email, hashedPassword, 5000);
+                    log('User created successfully after repair.');
+                } catch (pushError: any) {
+                    log('FATAL: DB Push failed: ' + pushError.message);
+                    if (pushError.stdout) log('stdout: ' + pushError.stdout);
+                    if (pushError.stderr) log('stderr: ' + pushError.stderr);
+                    throw pushError;
+                }
+            } else {
+                throw upsertError;
+            }
+        }
 
         res.json({
             success: true,
-            message: 'Admin user initialized successfully',
-            user: { email: user.email, role: user.role },
+            message: 'Admin user initialized successfully (possibly after repair)',
+            user: { email: email, role: 'ADMIN' },
             logs: debugLogs
         });
 
     } catch (error: any) {
         console.error('Init Admin Fatal Error:', error);
-        // Return 200 to ensure the user can SEE the error in the browser
         res.status(200).json({
             success: false,
             error: 'CRITICAL FAILURE',
@@ -136,5 +149,22 @@ export const initAdmin = async (req: Request, res: Response) => {
             stack: error.stack,
             logs: debugLogs
         });
+    }
+
+    async function upsertAdmin(email: string, pass: string, ms: number) {
+        // Use any explicitly to avoid type checks here for brevity/ robustness against generated client issues
+        await Promise.race([
+            prisma.user.upsert({
+                where: { email },
+                update: {},
+                create: {
+                    email,
+                    password: pass,
+                    name: 'Admin',
+                    role: 'ADMIN',
+                },
+            }),
+            timeout(ms)
+        ]);
     }
 };
