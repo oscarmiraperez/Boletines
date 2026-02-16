@@ -56,25 +56,18 @@ export const login = async (req: Request, res: Response) => {
 
 };
 
-import { exec } from 'child_process';
-import util from 'util';
-
-const execPromise = util.promisify(exec);
 
 export const initAdmin = async (req: Request, res: Response) => {
     try {
         console.log('--- Initializing Admin User ---');
 
-        // 0. Run Migrations (Create Tables)
+        // Check DB connection first
         try {
-            console.log('Running functionality migrations...');
-            // We use npx prisma migrate deploy to apply existing migrations
-            const { stdout, stderr } = await execPromise('npx prisma migrate deploy');
-            console.log('Migration output:', stdout);
-            if (stderr) console.error('Migration stderr:', stderr);
-        } catch (migrationError: any) {
-            console.error('Migration failed:', migrationError);
-            // Continue anyway, maybe tables exist
+            await prisma.$queryRaw`SELECT 1`;
+            console.log('DB Connection OK');
+        } catch (dbError) {
+            console.error('DB Connection Failed:', dbError);
+            return res.status(500).json({ error: 'Database connection failed', details: dbError });
         }
 
         // 1. Create default admin if not exists
