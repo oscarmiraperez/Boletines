@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../db';
+import { PrismaClient } from '@prisma/client';
 
 export const register = async (req: Request, res: Response) => {
     try {
@@ -58,83 +59,26 @@ export const login = async (req: Request, res: Response) => {
 
 
 export const initAdmin = async (req: Request, res: Response) => {
-    const debugLogs: string[] = [];
-    const log = (msg: string) => {
-        console.log(msg);
-        debugLogs.push(msg);
-    };
-
-    // Helper: Timeout Promise
-    const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('Operation timed out')), ms));
-
+    // --- ISOLATION TEST: NO DB CONNECTION ---
+    // We strictly return environment info to verify server is running and routing works.
     try {
-        log('--- Initializing Admin User (Debug Mode) ---');
-
-        // 1. Check Environment
         const dbUrl = process.env.DATABASE_URL;
-        log(`DATABASE_URL exists: ${!!dbUrl}`);
-        if (dbUrl) {
-            // Log structure but hide password
-            const sanitizedUrl = dbUrl.replace(/:([^@]+)@/, ':****@');
-            log(`DATABASE_URL: ${sanitizedUrl}`);
-        } else {
-            throw new Error('DATABASE_URL is missing in environment variables!');
-        }
 
-        // 2. Check DB Connection with TIMEOUT
-        log('Attempting DB connection via prisma.$queryRaw (5s timeout)...');
-        try {
-            await Promise.race([
-                prisma.$queryRaw`SELECT 1`,
-                timeout(5000)
-            ]);
-            log('DB Connection OK');
-        } catch (dbError: any) {
-            log(`DB Connection Failed: ${dbError.message}`);
-            // Force error to be thrown to catch block
-            throw new Error(`Database connection failed/timed out: ${dbError.message}`);
-        }
-
-        // 3. Create User with TIMEOUT
-        log('Attempting to create/update admin user (5s timeout)...');
-        const email = 'admin@test.com';
-        const password = 'password';
-
-        log('Hashing password...');
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        log('Upserting user...');
-        const user: any = await Promise.race([
-            prisma.user.upsert({
-                where: { email },
-                update: {},
-                create: {
-                    email,
-                    password: hashedPassword,
-                    name: 'Admin',
-                    role: 'ADMIN',
-                },
-            }),
-            timeout(5000)
-        ]);
-        log(`User created/found: ${user.id}`);
-
-        res.json({
+        res.status(200).json({
             success: true,
-            message: 'Admin user initialized successfully',
-            user: { email: user.email, role: user.role },
-            logs: debugLogs
+            message: 'Server is reachable. Database logic bypassed for isolation test.',
+            debug: {
+                hasDatabaseUrl: !!dbUrl,
+                sanitizedUrl: dbUrl ? dbUrl.replace(/:([^@]+)@/, ':****@') : 'MISSING',
+                port: process.env.PORT || '3000 (default)',
+                timestamp: new Date().toISOString()
+            }
         });
-
     } catch (error: any) {
-        console.error('Init Admin Fatal Error:', error);
-        // Return 200 to ensure the user can SEE the error in the browser
         res.status(200).json({
             success: false,
-            error: 'CRITICAL FAILURE',
-            message: error.message,
-            stack: error.stack,
-            logs: debugLogs
+            message: 'Error even in static check',
+            error: error.message
         });
     }
 };
