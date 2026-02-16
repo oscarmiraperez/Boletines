@@ -54,28 +54,30 @@ export const login = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Error logging in' });
     }
 
-    export const initAdmin = async (req: Request, res: Response) => {
-        try {
-            console.log('--- Initializing Admin User ---');
-            // 1. Create default admin if not exists
-            const email = 'admin@test.com';
-            const password = 'password';
-            const hashedPassword = await bcrypt.hash(password, 10);
+};
 
-            const user = await prisma.user.upsert({
-                where: { email },
-                update: {},
-                create: {
-                    email,
-                    password: hashedPassword,
-                    name: 'Admin',
-                    role: 'ADMIN',
-                },
-            });
+export const initAdmin = async (req: Request, res: Response) => {
+    try {
+        console.log('--- Initializing Admin User ---');
+        // 1. Create default admin if not exists
+        const email = 'admin@test.com';
+        const password = 'password';
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-            res.json({ message: 'Admin user initialized', user: { email: user.email, role: user.role } });
-        } catch (error: any) {
-            console.error('Init Admin Error:', error);
-            res.status(500).json({ error: 'Error initializing admin', details: error.message });
-        }
-    };
+        const user = await prisma.user.upsert({
+            where: { email },
+            update: {},
+            create: {
+                email,
+                password: hashedPassword,
+                name: 'Admin',
+                role: 'ADMIN',
+            },
+        });
+
+        res.json({ message: 'Admin user initialized', user: { email: user.email, role: user.role } });
+    } catch (error: any) {
+        console.error('Init Admin Error:', error);
+        res.status(500).json({ error: 'Error initializing admin', details: error.message });
+    }
+};
