@@ -15,10 +15,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from frontend build (Production & Preview)
-app.use(express.static(path.join(process.cwd(), '../frontend/dist')));
+// We use __dirname to be relative to the built file (backend/dist/index.js or backend/src/index.ts)
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendPath));
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+const uploadsPath = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
 
 // Routes
 import authRoutes from './routes/authRoutes';
@@ -40,7 +43,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 // SPA Fallback: Serve index.html for any other route (must be last)
 app.get('*', (req: Request, res: Response) => {
-    res.sendFile(path.join(process.cwd(), '../frontend/dist/index.html'));
+    res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // Start server
