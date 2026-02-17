@@ -27,75 +27,77 @@ const DifferentialItem = ({
     });
 
     return (
-        <div className="border border-gray-200 rounded p-4 mb-4 bg-white shadow-sm">
-            <div className="flex justify-between items-start mb-2">
-                <h4 className="font-semibold text-gray-700">Diferencial #{index + 1}</h4>
-                <button type="button" onClick={() => remove(index)} className="text-red-500 text-sm hover:underline">Eliminar Diferencial</button>
+        <div className="border border-slate-700 rounded-xl p-4 mb-4 bg-slate-800/50 shadow-sm">
+            <div className="flex justify-between items-start mb-3">
+                <h4 className="font-semibold text-slate-200">Diferencial #{index + 1}</h4>
+                <button type="button" onClick={() => remove(index)} className="text-red-400 text-sm hover:text-red-300 transition-colors">Eliminar</button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                    <label className="block text-xs font-medium text-gray-500">Polos</label>
-                    <select {...control.register(`differentials.${index}.poles`, { valueAsNumber: true })} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm sm:text-sm">
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Polos</label>
+                    <select {...control.register(`differentials.${index}.poles`, { valueAsNumber: true })} className="block w-full rounded-lg border-slate-600 bg-slate-700 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-xs py-1.5">
                         <option value="2">2P</option>
                         <option value="4">4P</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-gray-500">Amperaje (A)</label>
-                    <select {...control.register(`differentials.${index}.amperage`, { valueAsNumber: true })} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm sm:text-sm">
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Amperaje (A)</label>
+                    <select {...control.register(`differentials.${index}.amperage`, { valueAsNumber: true })} className="block w-full rounded-lg border-slate-600 bg-slate-700 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-xs py-1.5">
                         <option value="25">25 A</option>
                         <option value="40">40 A</option>
                         <option value="63">63 A</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-gray-500">Sensibilidad (mA)</label>
-                    <select {...control.register(`differentials.${index}.sensitivity`, { valueAsNumber: true })} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm sm:text-sm">
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Sensibilidad (mA)</label>
+                    <select {...control.register(`differentials.${index}.sensitivity`, { valueAsNumber: true })} className="block w-full rounded-lg border-slate-600 bg-slate-700 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-xs py-1.5">
                         <option value="30">30 mA</option>
                         <option value="300">300 mA</option>
                     </select>
                 </div>
                 <div className="md:col-span-3">
-                    <label className="block text-xs font-medium text-gray-500">Descripción / Zona</label>
-                    <input {...control.register(`differentials.${index}.description`)} type="text" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm sm:text-sm" placeholder="Ej: General vivienda" />
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Descripción / Zona</label>
+                    <input {...control.register(`differentials.${index}.description`)} type="text" className="block w-full rounded-lg border-slate-600 bg-slate-700 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-xs py-1.5" placeholder="Ej: General vivienda" />
                 </div>
             </div>
 
-            <div className="pl-4 border-l-2 border-blue-200">
-                <h5 className="text-sm font-medium text-gray-600 mb-2">Circuitos (Magnetotérmicos)</h5>
+            <div className="pl-4 border-l-2 border-sky-500/30">
+                <h5 className="text-xs font-medium text-sky-400 mb-2 uppercase tracking-wide">Circuitos</h5>
 
-                {fields.map((circuit, k) => (
-                    <div key={circuit.id} className="flex gap-2 mb-2 items-center bg-white p-2 rounded shadow-sm">
-                        <div className="w-20">
-                            <select {...control.register(`differentials.${index}.circuits.${k}.poles`, { valueAsNumber: true })} className="block w-full border border-gray-300 rounded text-xs">
-                                <option value="2">2P</option>
-                                <option value="4">4P</option>
-                            </select>
+                <div className="space-y-2">
+                    {fields.map((circuit, k) => (
+                        <div key={circuit.id} className="flex gap-2 items-center bg-slate-900/50 p-2 rounded-lg border border-slate-700/50">
+                            <div className="w-20">
+                                <select {...control.register(`differentials.${index}.circuits.${k}.poles`, { valueAsNumber: true })} className="block w-full border-slate-600 bg-slate-800 text-slate-200 rounded text-xs py-1">
+                                    <option value="2">2P</option>
+                                    <option value="4">4P</option>
+                                </select>
+                            </div>
+                            <div className="w-24">
+                                <select {...control.register(`differentials.${index}.circuits.${k}.amperage`, { valueAsNumber: true })} className="block w-full border-slate-600 bg-slate-800 text-slate-200 rounded text-xs py-1">
+                                    <option value="10">10 A</option>
+                                    <option value="16">16 A</option>
+                                    <option value="20">20 A</option>
+                                    <option value="25">25 A</option>
+                                    <option value="32">32 A</option>
+                                    <option value="40">40 A</option>
+                                </select>
+                            </div>
+                            <div className="flex-1">
+                                <input {...control.register(`differentials.${index}.circuits.${k}.description`)} placeholder="Uso (Ej: Alumbrado)" className="block w-full border-slate-600 bg-slate-800 text-slate-200 rounded text-xs px-2 py-1 placeholder-slate-500" />
+                            </div>
+                            <button type="button" onClick={() => removeCircuit(k)} className="text-slate-500 hover:text-red-400 transition-colors p-1">×</button>
                         </div>
-                        <div className="w-24">
-                            <select {...control.register(`differentials.${index}.circuits.${k}.amperage`, { valueAsNumber: true })} className="block w-full border border-gray-300 rounded text-xs">
-                                <option value="10">10 A</option>
-                                <option value="16">16 A</option>
-                                <option value="20">20 A</option>
-                                <option value="25">25 A</option>
-                                <option value="32">32 A</option>
-                                <option value="40">40 A</option>
-                            </select>
-                        </div>
-                        <div className="flex-1">
-                            <input {...control.register(`differentials.${index}.circuits.${k}.description`)} placeholder="Uso (Ej: Alumbrado)" className="block w-full border border-gray-300 rounded text-xs px-2 py-1" />
-                        </div>
-                        <button type="button" onClick={() => removeCircuit(k)} className="text-red-500 hover:text-red-700">×</button>
-                    </div>
-                ))}
+                    ))}
+                </div>
 
                 <button
                     type="button"
                     onClick={() => append({ poles: 2, amperage: 16, description: '' })}
-                    className="text-xs text-blue-600 hover:underline mt-1"
+                    className="text-xs font-medium text-sky-400 hover:text-sky-300 mt-3 flex items-center gap-1"
                 >
-                    + Añadir Circuito
+                    <span>+</span> Añadir Circuito
                 </button>
             </div>
         </div>
@@ -122,8 +124,6 @@ export default function CuadroModal({ isOpen, onClose, cuadroName, initialData, 
 
     useEffect(() => {
         if (isOpen && initialData) {
-            // Transform initialData to match form structure if necessary
-            // Assuming initialData comes in correctly structured from parent
             reset(initialData);
         } else if (isOpen && !initialData) {
             reset({
@@ -188,36 +188,36 @@ export default function CuadroModal({ isOpen, onClose, cuadroName, initialData, 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true" onClick={onClose}></div>
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity" aria-hidden="true" onClick={onClose}></div>
 
                 <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                <div className="inline-block align-bottom bg-slate-900 border border-slate-800 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
                     <form onSubmit={handleSubmit(onSubmit)}>
-                        <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                             <div className="sm:flex sm:items-start">
                                 <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                        Configurar Cuadro: {cuadroName}
+                                    <h3 className="text-xl leading-6 font-bold text-slate-100 mb-6" id="modal-title">
+                                        Configurar Cuadro: <span className="text-sky-400">{cuadroName}</span>
                                     </h3>
-                                    <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto pr-2">
+                                    <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
 
                                         {/* Left Column: Components */}
                                         <div className="space-y-6">
                                             {/* Main Breaker (IGA) */}
-                                            <div className="border-b pb-4">
-                                                <h4 className="font-medium text-gray-800 mb-2">Interruptor General Automático (IGA)</h4>
+                                            <div className="border-b border-slate-800 pb-4">
+                                                <h4 className="font-semibold text-slate-300 mb-3 text-sm uppercase tracking-wider">Interruptor General (IGA)</h4>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Polos</label>
-                                                        <select {...register('mainBreaker.poles', { valueAsNumber: true })} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm">
+                                                        <label className="block text-xs font-medium text-slate-400 mb-1">Polos</label>
+                                                        <select {...register('mainBreaker.poles', { valueAsNumber: true })} className="block w-full rounded-lg border-slate-700 bg-slate-800 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm">
                                                             <option value="2">2P (Monofásico)</option>
                                                             <option value="4">4P (Trifásico)</option>
                                                         </select>
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Amperaje</label>
-                                                        <select {...register('mainBreaker.amperage', { valueAsNumber: true })} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm">
+                                                        <label className="block text-xs font-medium text-slate-400 mb-1">Amperaje</label>
+                                                        <select {...register('mainBreaker.amperage', { valueAsNumber: true })} className="block w-full rounded-lg border-slate-700 bg-slate-800 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm">
                                                             <option value="25">25 A</option>
                                                             <option value="32">32 A</option>
                                                             <option value="40">40 A</option>
@@ -230,12 +230,12 @@ export default function CuadroModal({ isOpen, onClose, cuadroName, initialData, 
 
                                             {/* Differentials List */}
                                             <div>
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <h4 className="font-medium text-gray-800">Diferenciales y Circuitos</h4>
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <h4 className="font-semibold text-slate-300 text-sm uppercase tracking-wider">Diferenciales y Circuitos</h4>
                                                     <button
                                                         type="button"
                                                         onClick={() => appendDiff({ poles: 2, amperage: 40, sensitivity: 30, circuits: [] })}
-                                                        className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200"
+                                                        className="inline-flex items-center px-3 py-1.5 border border-sky-500/30 text-xs font-medium rounded-lg text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
                                                     >
                                                         + Añadir Diferencial
                                                     </button>
@@ -251,7 +251,9 @@ export default function CuadroModal({ isOpen, onClose, cuadroName, initialData, 
                                                         />
                                                     ))}
                                                     {diffFields.length === 0 && (
-                                                        <p className="text-sm text-gray-500 italic text-center py-4">No hay diferenciales configurados.</p>
+                                                        <div className="text-center py-8 border-2 border-dashed border-slate-800 rounded-xl">
+                                                            <p className="text-sm text-slate-500">No hay diferenciales configurados.</p>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -259,66 +261,68 @@ export default function CuadroModal({ isOpen, onClose, cuadroName, initialData, 
 
                                         {/* Right Column: Photos & Verification */}
                                         <div className="space-y-6">
-                                            <h4 className="font-medium text-gray-800 border-b pb-2">Estado y Fotos</h4>
+                                            <h4 className="font-semibold text-slate-300 border-b border-slate-800 pb-2 text-sm uppercase tracking-wider">Estado y Fotos</h4>
 
                                             {/* Frontal Photo */}
-                                            <div className="border p-4 rounded bg-white shadow-sm">
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Foto Frontal (Gabinete cerrado)</label>
+                                            <div className="border border-slate-700 p-4 rounded-xl bg-slate-800/30">
+                                                <label className="block text-sm font-medium text-slate-300 mb-3">Foto Frontal (Gabinete cerrado)</label>
                                                 {photos.frontal ? (
-                                                    <div className="mb-2 relative group">
-                                                        <img src={`${baseUrl}/uploads/${photos.frontal}`} alt="Frontal" className="w-full h-48 object-cover rounded border" />
+                                                    <div className="mb-3 relative group rounded-lg overflow-hidden border border-slate-600">
+                                                        <img src={`${baseUrl}/uploads/${photos.frontal}`} alt="Frontal" className="w-full h-48 object-cover" />
                                                         <button
                                                             type="button"
                                                             onClick={() => document.getElementById('file-frontal')?.click()}
-                                                            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            className="absolute inset-0 flex items-center justify-center bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity font-medium"
                                                         >
                                                             Cambiar Foto
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <div className="mb-2 h-48 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-gray-400">
-                                                        Sin foto
+                                                    <div className="mb-3 h-48 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-lg flex flex-col items-center justify-center text-slate-500 bg-slate-900/50 transition-colors cursor-pointer" onClick={() => document.getElementById('file-frontal')?.click()}>
+                                                        <span className="text-2xl mb-2">📷</span>
+                                                        <span className="text-xs">Subir foto frontal</span>
                                                     </div>
                                                 )}
                                                 <input
                                                     id="file-frontal"
                                                     type="file"
                                                     accept="image/*"
-                                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                    className="hidden"
                                                     onChange={(e) => handlePhotoUpload(e, 'frontal')}
                                                     disabled={uploadingPhoto !== null}
                                                 />
-                                                {uploadingPhoto === 'frontal' && <p className="text-xs text-blue-500 mt-1">Subiendo...</p>}
+                                                {uploadingPhoto === 'frontal' && <p className="text-xs text-sky-400 mt-2 text-center animate-pulse">Subiendo...</p>}
                                             </div>
 
                                             {/* Interior Photo */}
-                                            <div className="border p-4 rounded bg-white shadow-sm">
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Foto Interior (Cableado visible)</label>
+                                            <div className="border border-slate-700 p-4 rounded-xl bg-slate-800/30">
+                                                <label className="block text-sm font-medium text-slate-300 mb-3">Foto Interior (Cableado visible)</label>
                                                 {photos.interior ? (
-                                                    <div className="mb-2 relative group">
-                                                        <img src={`${baseUrl}/uploads/${photos.interior}`} alt="Interior" className="w-full h-48 object-cover rounded border" />
+                                                    <div className="mb-3 relative group rounded-lg overflow-hidden border border-slate-600">
+                                                        <img src={`${baseUrl}/uploads/${photos.interior}`} alt="Interior" className="w-full h-48 object-cover" />
                                                         <button
                                                             type="button"
                                                             onClick={() => document.getElementById('file-interior')?.click()}
-                                                            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            className="absolute inset-0 flex items-center justify-center bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity font-medium"
                                                         >
                                                             Cambiar Foto
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <div className="mb-2 h-48 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-gray-400">
-                                                        Sin foto
+                                                    <div className="mb-3 h-48 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-lg flex flex-col items-center justify-center text-slate-500 bg-slate-900/50 transition-colors cursor-pointer" onClick={() => document.getElementById('file-interior')?.click()}>
+                                                        <span className="text-2xl mb-2">🔌</span>
+                                                        <span className="text-xs">Subir foto interior</span>
                                                     </div>
                                                 )}
                                                 <input
                                                     id="file-interior"
                                                     type="file"
                                                     accept="image/*"
-                                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                    className="hidden"
                                                     onChange={(e) => handlePhotoUpload(e, 'interior')}
                                                     disabled={uploadingPhoto !== null}
                                                 />
-                                                {uploadingPhoto === 'interior' && <p className="text-xs text-blue-500 mt-1">Subiendo...</p>}
+                                                {uploadingPhoto === 'interior' && <p className="text-xs text-sky-400 mt-2 text-center animate-pulse">Subiendo...</p>}
                                             </div>
 
                                         </div>
@@ -327,11 +331,11 @@ export default function CuadroModal({ isOpen, onClose, cuadroName, initialData, 
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-white px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100">
-                            <button type="submit" className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                        <div className="bg-slate-900 px-4 py-4 sm:px-6 sm:flex sm:flex-row-reverse border-t border-slate-800 gap-2">
+                            <button type="submit" className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-sky-600 text-base font-medium text-white hover:bg-sky-500 focus:outline-none sm:w-auto sm:text-sm transition-colors">
                                 Guardar Cambios
                             </button>
-                            <button type="button" className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" onClick={onClose}>
+                            <button type="button" className="mt-3 w-full inline-flex justify-center rounded-lg border border-slate-700 shadow-sm px-4 py-2 bg-slate-800 text-base font-medium text-slate-300 hover:bg-slate-700 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm transition-colors" onClick={onClose}>
                                 Cancelar
                             </button>
                         </div>
