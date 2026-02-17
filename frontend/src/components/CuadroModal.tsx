@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useForm, useFieldArray, Control } from 'react-hook-form';
+import { API_URL } from '../api';
 
 interface CuadroModalProps {
     isOpen: boolean;
@@ -160,7 +161,7 @@ export default function CuadroModal({ isOpen, onClose, cuadroName, initialData, 
         setUploadingPhoto(type);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/technical/cuadros/${initialData.id}/photos`, {
+            const response = await fetch(`${API_URL}/technical/cuadros/${initialData.id}/photos`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`

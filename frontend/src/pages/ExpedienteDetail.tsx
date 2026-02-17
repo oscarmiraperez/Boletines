@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { apiRequest } from '../api';
+import { apiRequest, API_URL } from '../api';
 import SignatureCanvas from '../components/SignatureCanvas';
 import TechnicalForms from './TechnicalForms';
 
@@ -31,7 +31,7 @@ export default function ExpedienteDetail() {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/documents/expedientes/${id}/signature`, {
+            const response = await fetch(`${API_URL}/documents/expedientes/${id}/signature`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -61,7 +61,7 @@ export default function ExpedienteDetail() {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/documents/expedientes/${id}/dni`, {
+            const response = await fetch(`${API_URL}/documents/expedientes/${id}/dni`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -82,7 +82,7 @@ export default function ExpedienteDetail() {
     const generateAuthorization = async () => {
         try {
             const token = localStorage.getItem('token');
-            const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/documents/expedientes/${id}/authorization/generate`;
+            const url = `${API_URL}/documents/expedientes/${id}/authorization/generate`;
 
             const res = await fetch(url, {
                 method: 'POST',
@@ -111,7 +111,7 @@ export default function ExpedienteDetail() {
     const generateMTD = async () => {
         try {
             const token = localStorage.getItem('token');
-            const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/documents/expedientes/${id}/mtd/generate`;
+            const url = `${API_URL}/documents/expedientes/${id}/mtd/generate`;
 
             const res = await fetch(url, {
                 method: 'POST',
@@ -166,7 +166,7 @@ export default function ExpedienteDetail() {
                             onClick={async () => {
                                 try {
                                     const token = localStorage.getItem('token');
-                                    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/documents/expedientes/${id}/mtd/generate`, {
+                                    const response = await fetch(`${API_URL}/documents/expedientes/${id}/mtd/generate`, {
                                         method: 'POST',
                                         headers: { 'Authorization': `Bearer ${token}` }
                                     });

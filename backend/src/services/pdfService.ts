@@ -245,6 +245,10 @@ export const generateSchematicPDF = async (data: any, outputPath: string) => {
 
         // Helper to draw frame and title block (cajetín) on current page
         const drawFrameAndTitleBlock = () => {
+            // Save current margins and set to 0 to prevents auto-page-add when drawing near bottom
+            const originalMargins = { ...doc.page.margins };
+            doc.page.margins = { top: 0, bottom: 0, left: 0, right: 0 };
+
             const pageWidth = 595.28;
             const pageHeight = 841.89;
             const margin = 20;
@@ -279,6 +283,9 @@ export const generateSchematicPDF = async (data: any, outputPath: string) => {
             const power = data.contractedPower || (data.installation ? data.installation.contractedPower : '') || 'TODO';
             doc.font('Helvetica-Bold').text('POTENCIA TOTAL:', titleBlockX + 5, titleBlockY + 60);
             doc.font('Helvetica').text(`${power} kW`, titleBlockX + 85, titleBlockY + 60);
+
+            // Restore margins
+            doc.page.margins = originalMargins;
         };
 
         // Event listener for adding pages to ensure frame is drawn on every page

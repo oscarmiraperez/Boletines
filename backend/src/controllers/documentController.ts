@@ -141,6 +141,7 @@ export const generateAuthDoc = async (req: Request, res: Response) => {
 export const generateMTDDoc = async (req: Request, res: Response) => {
     try {
         const { expedienteId } = req.params;
+        console.log(`[generateMTDDoc] Request received for Expediente ID: ${expedienteId}`);
 
         const expediente = await prisma.expediente.findUnique({
             where: { id: expedienteId },
@@ -161,7 +162,12 @@ export const generateMTDDoc = async (req: Request, res: Response) => {
             }
         });
 
-        if (!expediente) return res.status(404).json({ error: 'Expediente not found' });
+        if (!expediente) {
+            console.error(`[generateMTDDoc] Expediente not found: ${expedienteId}`);
+            return res.status(404).json({ error: 'Expediente not found' });
+        }
+
+        console.log(`[generateMTDDoc] Expediente found. Code: ${expediente.code}`);
 
         const mtdJson = ((expediente as any).mtdData as any) || {};
 
@@ -232,12 +238,15 @@ export const generateMTDDoc = async (req: Request, res: Response) => {
         if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
         const outputPath = path.join(outputDir, `mtd-${safeCode}.pdf`);
 
+        console.log(`[generateMTDDoc] Generating PDF at: ${outputPath}`);
+
         // Switch to Official Template Filler
         await fillOfficialMTD(data, outputPath);
 
+        console.log(`[generateMTDDoc] PDF generated successfully. Downloading...`);
         res.download(outputPath);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error generating MTD' });
+        console.error('[generateMTDDoc] Error:', error);
+        res.status(500).json({ error: 'Error generating MTD', details: String(error) });
     }
 };
