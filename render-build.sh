@@ -17,6 +17,8 @@ npm install
 echo "--- 4. Generating Prisma Client (Postgres) ---"
 cp prisma/schema.postgres.prisma prisma/schema.prisma
 npx prisma generate
+echo "--- 4.1 Pushing Schema to DB (Postgres) ---"
+npx prisma db push --accept-data-loss
 
 echo "--- 5. Building Backend ---"
 npm run build
