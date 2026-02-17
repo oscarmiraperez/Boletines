@@ -43,17 +43,14 @@ export default function SchematicsList() {
         }
     };
 
-    const handleCreate = async () => {
-        const name = prompt('Obra / Descripción:');
-        if (!name) return;
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [newItem, setNewItem] = useState({ name: '', client: '', address: '', power: '5.75' });
 
-        // Minimal data to create
-        const client = prompt('Cliente (Opcional):') || '';
-        const address = prompt('Dirección (Opcional):') || '';
-        const powerInput = prompt('Potencia Instalada (kW, Obligatorio):', '5.75');
+    const handleCreate = async (e: React.FormEvent) => {
+        e.preventDefault();
 
-        if (!powerInput) {
-            alert('La potencia es obligatoria para crear un esquema.');
+        if (!newItem.name || !newItem.power) {
+            alert('El nombre y la potencia son obligatorios.');
             return;
         }
 
@@ -61,13 +58,12 @@ export default function SchematicsList() {
             const newEsquema = await apiRequest('/esquemas', {
                 method: 'POST',
                 body: JSON.stringify({
-                    name,
-                    client,
-                    address,
-                    power: powerInput,
-                    data: JSON.stringify({ cuadros: [] }) // Empty initial data
+                    ...newItem,
+                    data: JSON.stringify({ cuadros: [] })
                 })
             });
+            setIsModalOpen(false);
+            setNewItem({ name: '', client: '', address: '', power: '5.75' });
             navigate(`/esquemas/${newEsquema.id}`);
         } catch (error) {
             console.error(error);
@@ -83,7 +79,7 @@ export default function SchematicsList() {
                     <p className="text-slate-400 mt-1">Gestión de esquemas eléctricos sin expediente asociado</p>
                 </div>
                 <button
-                    onClick={handleCreate}
+                    onClick={() => setIsModalOpen(true)}
                     className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-lg shadow-sky-900/20"
                 >
                     <Plus className="w-5 h-5" />
@@ -188,6 +184,75 @@ export default function SchematicsList() {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+                            <h2 className="text-xl font-bold text-slate-100">Nuevo Esquema</h2>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
+                        </div>
+                        <form onSubmit={handleCreate} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Obra / Descripción <span className="text-red-400">*</span></label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                                    placeholder="Ej: Vivienda Unifamiliar"
+                                    value={newItem.name}
+                                    onChange={e => setNewItem({ ...newItem, name: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Cliente</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                                    placeholder="Nombre del cliente"
+                                    value={newItem.client}
+                                    onChange={e => setNewItem({ ...newItem, client: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Dirección</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                                    placeholder="Dirección de la obra"
+                                    value={newItem.address}
+                                    onChange={e => setNewItem({ ...newItem, address: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Potencia Instalada (kW) <span className="text-red-400">*</span></label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    required
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                                    value={newItem.power}
+                                    onChange={e => setNewItem({ ...newItem, power: e.target.value })}
+                                />
+                            </div>
+                            <div className="pt-4 flex gap-3 justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-sky-900/20"
+                                >
+                                    Crear Esquema
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
         </div>

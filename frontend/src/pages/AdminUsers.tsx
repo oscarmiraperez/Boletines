@@ -114,64 +114,125 @@ export default function AdminUsers() {
             </div>
 
             {loading ? <div className="text-center">Cargando...</div> : (
-                <div className="bg-slate-900 shadow overflow-hidden sm:rounded-lg border border-slate-800">
-                    <table className="min-w-full divide-y divide-slate-800">
-                        <thead className="bg-slate-950">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Nombre</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Email</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Rol</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Estado</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Boletines</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-slate-900 divide-y divide-slate-800">
-                            {users.map(user => {
-                                const expCount = (user.expedientesOperador?.length || 0) + (user.expedientesTecnico?.length || 0);
-                                return (
-                                    <tr key={user.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <button
-                                                onClick={() => openEdit(user)}
-                                                className="text-sky-400 hover:text-sky-300 hover:underline font-medium text-left"
-                                            >
-                                                {user.name}
-                                            </button>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-slate-400">{user.email}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                                                {user.role}
+                <>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block bg-slate-900 shadow overflow-hidden sm:rounded-lg border border-slate-800">
+                        <table className="min-w-full divide-y divide-slate-800">
+                            <thead className="bg-slate-950">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Nombre</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Email</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Rol</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Estado</th>
+                                    <th className="px-6 py-3 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Boletines</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-slate-900 divide-y divide-slate-800">
+                                {users.map(user => {
+                                    const expCount = (user.expedientesOperador?.length || 0) + (user.expedientesTecnico?.length || 0);
+                                    return (
+                                        <tr key={user.id}>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <button
+                                                    onClick={() => openEdit(user)}
+                                                    className="text-sky-400 hover:text-sky-300 hover:underline font-medium text-left"
+                                                >
+                                                    {user.name}
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-slate-400">{user.email}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                    ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
+                                                    {user.role}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <button
+                                                    onClick={() => toggleStatus(user)}
+                                                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-colors
+                                                    ${user.isActive ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'}`}
+                                                >
+                                                    {user.isActive ? 'Activo' : 'Pendiente'}
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center text-slate-400">
+                                                {expCount > 0 ? (
+                                                    <span className="bg-slate-800 px-2 py-1 rounded text-xs">{expCount}</span>
+                                                ) : (
+                                                    <span className="text-slate-600">-</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button onClick={() => openEdit(user)} className="text-sky-400 hover:text-sky-300 mr-4">Editar</button>
+                                                <button onClick={() => handleDelete(user.id)} className="text-red-400 hover:text-red-300">Eliminar</button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                        {users.map(user => {
+                            const expCount = (user.expedientesOperador?.length || 0) + (user.expedientesTecnico?.length || 0);
+                            return (
+                                <div key={user.id} className="bg-slate-900 border border-slate-800 rounded-lg p-4 shadow-sm space-y-3">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="text-slate-200 font-semibold text-lg">{user.name}</h3>
+                                            <p className="text-slate-500 text-sm break-all">{user.email}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => openEdit(user)}
+                                            className="text-sky-400 hover:text-sky-300 p-2"
+                                            title="Editar"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                        </button>
+                                    </div>
+
+                                    <div className="flex gap-2 flex-wrap">
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full 
+                                            ${user.role === 'ADMIN' ? 'bg-purple-900/40 text-purple-300 border border-purple-700/50' : 'bg-green-900/40 text-green-300 border border-green-700/50'}`}>
+                                            {user.role}
+                                        </span>
+                                        <button
+                                            onClick={() => toggleStatus(user)}
+                                            className={`px-2 py-1 text-xs font-semibold rounded-full border transition-colors
+                                            ${user.isActive ? 'bg-emerald-900/40 text-emerald-300 border-emerald-700/50' : 'bg-yellow-900/40 text-yellow-300 border-yellow-700/50'}`}
+                                        >
+                                            {user.isActive ? 'Activo' : 'Pendiente'}
+                                        </button>
+                                        {expCount > 0 && (
+                                            <span className="bg-slate-800 text-slate-400 px-2 py-1 rounded-full text-xs border border-slate-700">
+                                                {expCount} Boletines
                                             </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <button
-                                                onClick={() => toggleStatus(user)}
-                                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-colors
-                                                ${user.isActive ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'}`}
-                                            >
-                                                {user.isActive ? 'Activo' : 'Pendiente'}
-                                            </button>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center text-slate-400">
-                                            {expCount > 0 ? (
-                                                <span className="bg-slate-800 px-2 py-1 rounded text-xs">{expCount}</span>
-                                            ) : (
-                                                <span className="text-slate-600">-</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <button onClick={() => openEdit(user)} className="text-sky-400 hover:text-sky-300 mr-4">Editar</button>
-                                            <button onClick={() => handleDelete(user.id)} className="text-red-400 hover:text-red-300">Eliminar</button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                                        )}
+                                    </div>
+
+                                    <div className="pt-3 border-t border-slate-800/50 flex justify-end gap-3">
+                                        <button
+                                            onClick={() => handleDelete(user.id)}
+                                            className="text-red-400 text-sm hover:text-red-300 hover:bg-red-900/20 px-3 py-1.5 rounded transition-colors"
+                                        >
+                                            Eliminar Usuario
+                                        </button>
+                                        <button
+                                            onClick={() => openEdit(user)}
+                                            className="text-sky-400 text-sm hover:text-sky-300 hover:bg-sky-900/20 px-3 py-1.5 rounded transition-colors"
+                                        >
+                                            Ver Detalles
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
             )}
 
             {isModalOpen && (
@@ -288,7 +349,8 @@ export default function AdminUsers() {
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }
