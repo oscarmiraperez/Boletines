@@ -120,7 +120,12 @@ export default function SchematicEditorPage() {
 
     const onCreateCuadro = async (name: string) => {
         const currentCuadros = esquema.technicalData.cuadros || [];
-        const newCuadro = { id: crypto.randomUUID(), name, differentials: [] }; // Generate ID frontend-side or let backend handle? 
+        const newCuadro = {
+            id: crypto.randomUUID(),
+            name,
+            differentials: [],
+            mainBreaker: { poles: 2, amperage: 40 }
+        }; // Generate ID frontend-side 
         // Backend independent esquema doesn't have a sub-table for cuadros, it's all JSON.
         // So we generate ID here.
 
