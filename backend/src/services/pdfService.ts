@@ -10,11 +10,30 @@ const logDebug = (msg: string) => {
     console.log(`[DEBUG] ${msg}`);
 };
 
+// Helper to find template in multiple possible locations
+const getTemplatePath = () => {
+    const candidates = [
+        path.join(process.cwd(), 'templates/memoria en blanco.pdf'),
+        path.join(process.cwd(), 'backend/templates/memoria en blanco.pdf'),
+        path.join(__dirname, '../../templates/memoria en blanco.pdf'), // From dist/services/
+        path.join(__dirname, '../templates/memoria en blanco.pdf')      // Fallback
+    ];
+
+    for (const p of candidates) {
+        if (fs.existsSync(p)) {
+            logDebug(`Template found at: ${p}`);
+            return p;
+        }
+    }
+    logDebug(`Template NOT found. Searched in: ${candidates.join(', ')}`);
+    return null;
+};
+
 export const fillOfficialMTD = async (data: any, outputPath: string) => {
     try {
-        const templatePath = path.join(process.cwd(), 'templates/memoria en blanco.pdf');
+        const templatePath = getTemplatePath();
 
-        if (!fs.existsSync(templatePath)) {
+        if (!templatePath) {
             throw new Error('Template PDF not found');
         }
 
