@@ -316,3 +316,18 @@ export const generateSchematicDoc = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Error generating Schematic', details: String(error) });
     }
 };
+
+export const getDebugLogs = async (req: Request, res: Response) => {
+    try {
+        const logPath = path.join(process.cwd(), 'pdf_debug.txt');
+        if (fs.existsSync(logPath)) {
+            const logs = fs.readFileSync(logPath, 'utf8');
+            res.header('Content-Type', 'text/plain');
+            res.send(logs);
+        } else {
+            res.send('No logs found.');
+        }
+    } catch (error) {
+        res.status(500).send('Error reading logs');
+    }
+};
