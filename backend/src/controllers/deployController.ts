@@ -8,11 +8,11 @@ export const fixDb = async (req: Request, res: Response) => {
     // 2026-02-17: Dedicated route to force DB schema push and debug errors
     try {
         console.log('--- Starting Manual DB Push ---');
-        // Use direct path to avoid npx overhead
-        const cmd = './node_modules/.bin/prisma db push --accept-data-loss --skip-generate';
+        // Use npx for robustness (path independence)
+        const cmd = 'npx prisma db push --accept-data-loss --skip-generate';
 
         const { stdout, stderr } = await execPromise(cmd, {
-            timeout: 20000,
+            timeout: 30000, // Increased timeout
             env: { ...process.env, FORCE_COLOR: '1' }
         });
 
