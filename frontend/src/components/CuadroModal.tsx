@@ -20,6 +20,8 @@ const DifferentialItem = ({
     index: number,
     remove: (index: number) => void
 }) => {
+    const inputClass = "block w-full rounded-lg border-slate-700 bg-slate-950/50 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-xs py-2";
+
     // Nested Field Array for Circuits within this Differential
     const { fields, append, remove: removeCircuit } = useFieldArray({
         control,
@@ -27,55 +29,55 @@ const DifferentialItem = ({
     });
 
     return (
-        <div className="border border-slate-700 rounded-xl p-4 mb-4 bg-slate-800/50 shadow-sm">
+        <div className="border border-slate-800 rounded-xl p-4 mb-4 bg-slate-900/50 shadow-sm">
             <div className="flex justify-between items-start mb-3">
-                <h4 className="font-semibold text-slate-200">Diferencial #{index + 1}</h4>
-                <button type="button" onClick={() => remove(index)} className="text-red-400 text-sm hover:text-red-300 transition-colors">Eliminar</button>
+                <h4 className="font-semibold text-slate-300 text-sm">Diferencial #{index + 1}</h4>
+                <button type="button" onClick={() => remove(index)} className="text-red-400 text-xs hover:text-red-300 transition-colors bg-red-500/10 px-2 py-1 rounded">Eliminar</button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Polos</label>
-                    <select {...control.register(`differentials.${index}.poles`, { valueAsNumber: true })} className="block w-full rounded-lg border-slate-600 bg-slate-700 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-xs py-1.5">
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Polos</label>
+                    <select {...control.register(`differentials.${index}.poles`, { valueAsNumber: true })} className={inputClass}>
                         <option value="2">2P</option>
                         <option value="4">4P</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Amperaje (A)</label>
-                    <select {...control.register(`differentials.${index}.amperage`, { valueAsNumber: true })} className="block w-full rounded-lg border-slate-600 bg-slate-700 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-xs py-1.5">
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Amperaje (A)</label>
+                    <select {...control.register(`differentials.${index}.amperage`, { valueAsNumber: true })} className={inputClass}>
                         <option value="25">25 A</option>
                         <option value="40">40 A</option>
                         <option value="63">63 A</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Sensibilidad (mA)</label>
-                    <select {...control.register(`differentials.${index}.sensitivity`, { valueAsNumber: true })} className="block w-full rounded-lg border-slate-600 bg-slate-700 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-xs py-1.5">
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Sensibilidad (mA)</label>
+                    <select {...control.register(`differentials.${index}.sensitivity`, { valueAsNumber: true })} className={inputClass}>
                         <option value="30">30 mA</option>
                         <option value="300">300 mA</option>
                     </select>
                 </div>
                 <div className="md:col-span-3">
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Descripción / Zona</label>
-                    <input {...control.register(`differentials.${index}.description`)} type="text" className="block w-full rounded-lg border-slate-600 bg-slate-700 text-slate-200 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-xs py-1.5" placeholder="Ej: General vivienda" />
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Descripción / Zona</label>
+                    <input {...control.register(`differentials.${index}.description`)} type="text" className={inputClass} placeholder="Ej: General vivienda" />
                 </div>
             </div>
 
-            <div className="pl-4 border-l-2 border-sky-500/30">
-                <h5 className="text-xs font-medium text-sky-400 mb-2 uppercase tracking-wide">Circuitos</h5>
+            <div className="pl-4 border-l-2 border-sky-500/20 ml-1">
+                <h5 className="text-[10px] font-bold text-sky-500 mb-3 uppercase tracking-wider">Circuitos Asociados</h5>
 
                 <div className="space-y-2">
                     {fields.map((circuit, k) => (
-                        <div key={circuit.id} className="flex gap-2 items-center bg-slate-900/50 p-2 rounded-lg border border-slate-700/50">
+                        <div key={circuit.id} className="flex gap-2 items-center bg-slate-950/30 p-2 rounded-lg border border-slate-800/50">
                             <div className="w-20">
-                                <select {...control.register(`differentials.${index}.circuits.${k}.poles`, { valueAsNumber: true })} className="block w-full border-slate-600 bg-slate-800 text-slate-200 rounded text-xs py-1">
+                                <select {...control.register(`differentials.${index}.circuits.${k}.poles`, { valueAsNumber: true })} className="block w-full border-slate-700 bg-slate-900 text-slate-300 rounded text-xs py-1.5 focus:ring-sky-500 focus:border-sky-500">
                                     <option value="2">2P</option>
                                     <option value="4">4P</option>
                                 </select>
                             </div>
                             <div className="w-24">
-                                <select {...control.register(`differentials.${index}.circuits.${k}.amperage`, { valueAsNumber: true })} className="block w-full border-slate-600 bg-slate-800 text-slate-200 rounded text-xs py-1">
+                                <select {...control.register(`differentials.${index}.circuits.${k}.amperage`, { valueAsNumber: true })} className="block w-full border-slate-700 bg-slate-900 text-slate-300 rounded text-xs py-1.5 focus:ring-sky-500 focus:border-sky-500">
                                     <option value="10">10 A</option>
                                     <option value="16">16 A</option>
                                     <option value="20">20 A</option>
@@ -85,9 +87,9 @@ const DifferentialItem = ({
                                 </select>
                             </div>
                             <div className="flex-1">
-                                <input {...control.register(`differentials.${index}.circuits.${k}.description`)} placeholder="Uso (Ej: Alumbrado)" className="block w-full border-slate-600 bg-slate-800 text-slate-200 rounded text-xs px-2 py-1 placeholder-slate-500" />
+                                <input {...control.register(`differentials.${index}.circuits.${k}.description`)} placeholder="Uso (Ej: Alumbrado)" className="block w-full border-slate-700 bg-slate-900 text-slate-300 rounded text-xs px-2 py-1.5 placeholder-slate-600 focus:ring-sky-500 focus:border-sky-500" />
                             </div>
-                            <button type="button" onClick={() => removeCircuit(k)} className="text-slate-500 hover:text-red-400 transition-colors p-1">×</button>
+                            <button type="button" onClick={() => removeCircuit(k)} className="text-slate-500 hover:text-red-400 transition-colors p-1.5 hover:bg-red-500/10 rounded">×</button>
                         </div>
                     ))}
                 </div>
@@ -95,7 +97,7 @@ const DifferentialItem = ({
                 <button
                     type="button"
                     onClick={() => append({ poles: 2, amperage: 16, description: '' })}
-                    className="text-xs font-medium text-sky-400 hover:text-sky-300 mt-3 flex items-center gap-1"
+                    className="text-xs font-semibold text-sky-400 hover:text-sky-300 mt-3 flex items-center gap-1 py-1 px-2 rounded hover:bg-sky-500/10 transition-colors"
                 >
                     <span>+</span> Añadir Circuito
                 </button>
