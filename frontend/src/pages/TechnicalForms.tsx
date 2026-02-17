@@ -147,21 +147,28 @@ export default function TechnicalForms({
         }
     };
 
-    const handleCreateCuadro = async () => {
-        const name = prompt('Nombre del cuadro (Ej: General)');
-        if (!name) return;
+    const [isCreateCuadroOpen, setIsCreateCuadroOpen] = useState(false);
+    const [newCuadroName, setNewCuadroName] = useState('');
+
+    const handleCreateCuadroSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newCuadroName) return;
 
         if (parentCreateCuadro) {
-            await parentCreateCuadro(name);
+            await parentCreateCuadro(newCuadroName);
+            setIsCreateCuadroOpen(false);
+            setNewCuadroName('');
             return;
         }
 
         try {
             await apiRequest(`/technical/expedientes/${id}/cuadros`, {
                 method: 'POST',
-                body: JSON.stringify({ name, description: '' })
+                body: JSON.stringify({ name: newCuadroName, description: '' })
             });
             fetchTechnicalData();
+            setIsCreateCuadroOpen(false);
+            setNewCuadroName('');
         } catch (e) {
             alert('Error creando cuadro');
         }
@@ -488,7 +495,7 @@ export default function TechnicalForms({
                         <h3 className={sectionTitleClasses.replace('mb-4', 'mb-0 border-b-0')}>Cuadros Eléctricos</h3>
                         <div className="flex gap-2">
                             <button
-                                onClick={handleCreateCuadro}
+                                onClick={() => setIsCreateCuadroOpen(true)}
                                 className="text-xs sm:text-sm bg-sky-600 hover:bg-sky-500 text-white px-3 py-2 rounded-lg transition-colors"
                             >
                                 + Añadir Cuadro
@@ -523,6 +530,45 @@ export default function TechnicalForms({
                             </div>
                         ))}
                     </div>
+
+                    {isCreateCuadroOpen && (
+                        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+                                <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+                                    <h3 className="text-lg font-bold text-slate-100">Nuevo Cuadro</h3>
+                                    <button onClick={() => setIsCreateCuadroOpen(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
+                                </div>
+                                <form onSubmit={handleCreateCuadroSubmit} className="p-4 space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Nombre del Cuadro</label>
+                                        <input
+                                            type="text"
+                                            autoFocus
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                                            placeholder="Ej: General, Planta 1..."
+                                            value={newCuadroName}
+                                            onChange={e => setNewCuadroName(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsCreateCuadroOpen(false)}
+                                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition-colors"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-sm transition-colors shadow-lg shadow-sky-900/20"
+                                        >
+                                            Crear
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
