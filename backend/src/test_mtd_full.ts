@@ -107,7 +107,12 @@ const outputPath = path.join(__dirname, '../test_mtd_full.pdf');
 async function runTest() {
     console.log("Starting Full MTD PDF Generation Test...");
     try {
-        await fillOfficialMTD(testData, outputPath);
+        const templatePath = path.join(process.cwd(), 'templates', 'F3610 (1).pdf');
+        if (!fs.existsSync(templatePath)) {
+            console.error("Template not found at", templatePath);
+            return;
+        }
+        await fillOfficialMTD(templatePath, testData, outputPath);
         if (fs.existsSync(outputPath)) {
             console.log(`SUCCESS: PDF generated at ${outputPath}`);
         } else {

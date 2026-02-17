@@ -17,12 +17,12 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
         const form = pdfDoc.getForm();
 
         // Helper to safely set fields
-        const safeSet = (fieldName: string, value: string | number | undefined | null) => {
+        const safeSet = (fieldName: string, value: string | number | boolean | undefined | null) => {
             if (value === undefined || value === null) return;
             try {
                 const field = form.getField(fieldName);
                 if (field) {
-                    // Handle Checkboxes (if value is 'X' or boolean true)
+                    // Handle Checkboxes (if value is 'X', boolean true, or 'x')
                     if (field.constructor.name === 'PDFCheckBox') {
                         if (value === true || value === 'X' || value === 'x') {
                             form.getCheckBox(fieldName).check();

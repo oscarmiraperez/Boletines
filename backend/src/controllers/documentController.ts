@@ -260,7 +260,21 @@ export const generateMTDDoc = async (req: Request, res: Response) => {
         console.log(`[generateMTDDoc] Generating PDF at: ${outputPath}`);
 
         // Switch to Official Template Filler
-        await fillOfficialMTD(data, outputPath);
+        const templatePath = path.join(process.cwd(), 'templates', 'F3610 (1).pdf'); // Ensure this file exists in root/templates or adjust path
+        // Check if template exists, if not try root
+        let finalTemplatePath = templatePath;
+        if (!fs.existsSync(templatePath)) {
+            // Fallback to root directory if needed
+            const rootTemplate = path.join(process.cwd(), 'F3610 (1).pdf');
+            if (fs.existsSync(rootTemplate)) {
+                finalTemplatePath = rootTemplate;
+            } else {
+                console.error('[generateMTDDoc] Template not found at:', templatePath, 'or', rootTemplate);
+                throw new Error('PDF Template not found');
+            }
+        }
+
+        await fillOfficialMTD(finalTemplatePath, data, outputPath);
 
         console.log(`[generateMTDDoc] PDF generated successfully. Downloading...`);
         res.download(outputPath);
