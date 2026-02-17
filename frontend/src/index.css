@@ -6,4 +6,22 @@
   body {
     @apply bg-slate-950 text-slate-50 font-sans antialiased;
   }
+
+  /* Fix for Chrome Autofill background */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-text-fill-color: white !important;
+    -webkit-box-shadow: 0 0 0 30px rgb(15 23 42) inset !important;
+    /* bg-slate-900 */
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  /* Fix for Select Options in Dark Mode */
+  select option {
+    background-color: rgb(15 23 42);
+    /* slate-900 */
+    color: white;
+  }
 }

@@ -343,7 +343,7 @@ export const generateSchematicPDF = async (data: any, outputPath: string) => {
         // Draw on first page immediately
         drawFrameAndTitleBlock();
 
-        doc.font('Helvetica-Bold').fontSize(14).text('ESQUEMA UNIFILAR (ANEXO)', { align: 'center' });
+        doc.fillColor('black').font('Helvetica-Bold').fontSize(14).text('ESQUEMA UNIFILAR (ANEXO)', { align: 'center' });
         doc.moveDown();
 
         const startX = 50;
@@ -358,7 +358,7 @@ export const generateSchematicPDF = async (data: any, outputPath: string) => {
                         currentY = 50;
                     }
 
-                    doc.font('Helvetica-Bold').fontSize(12).text(`Cuadro: ${cuadro.name}`, startX, currentY);
+                    doc.fillColor('black').font('Helvetica-Bold').fontSize(12).text(`Cuadro: ${cuadro.name}`, startX, currentY);
                     currentY += 40;
 
                     const iga = cuadro.mainBreaker;
@@ -419,13 +419,13 @@ export const generateSchematicPDF = async (data: any, outputPath: string) => {
 
                                     // Text for section if exists
                                     if (circ.section) {
-                                        doc.fontSize(7).text(`${circ.section}mm²`, circBusX + 75, circY + 10);
+                                        doc.fillColor('black').fontSize(7).text(`${circ.section}mm²`, circBusX + 75, circY + 10);
                                     }
 
                                     doc.moveTo(circBusX + 60, circY).lineTo(circBusX + 150, circY).stroke();
 
                                     // Label at the end (C1, C2...)
-                                    doc.fontSize(9).font('Helvetica-Bold').text(circName, circBusX + 155, circY - 4);
+                                    doc.fillColor('black').fontSize(9).font('Helvetica-Bold').text(circName, circBusX + 155, circY - 4);
                                     // Description below the label
                                     doc.fontSize(8).font('Helvetica').text(circDesc, circBusX + 160, circY + 8);
                                 });
@@ -597,10 +597,10 @@ function drawMagnetotermico(doc: PDFKit.PDFDocument, x: number, y: number, label
     doc.restore();
 
     // Text Data
-    doc.fontSize(8).font('Helvetica-Bold');
+    doc.fillColor('black').fontSize(8).font('Helvetica-Bold');
     doc.text(label, x - 5, y + 25, { width: 40, align: 'center' });
 
-    doc.fontSize(7).font('Helvetica');
+    doc.fillColor('black').fontSize(7).font('Helvetica');
     // Top text: Amperage and Poles
     doc.text(`${amperage}A P:${poles}`, x - 10, y - 12, { width: 50, align: 'center' });
 }
@@ -634,10 +634,10 @@ function drawDiferencial(doc: PDFKit.PDFDocument, x: number, y: number, label: s
     doc.moveTo(boxX + 5, boxY + 2.5).lineTo(x + 25, boxY + 2.5).lineTo(x + 25, centerY - 8).stroke();
 
     // Text Data
-    doc.fontSize(8).font('Helvetica-Bold');
+    doc.fillColor('black').fontSize(8).font('Helvetica-Bold');
     doc.text(label, x - 5, y + 25, { width: 40, align: 'center' });
 
-    doc.fontSize(7).font('Helvetica');
+    doc.fillColor('black').fontSize(7).font('Helvetica');
     doc.text(`${amperage}A`, x - 12, y - 12, { width: 30, align: 'right' });
     doc.text(`${sensitivity}mA`, x + 12, y - 12, { width: 35, align: 'left' });
     doc.text(`P:${poles}`, x - 5, y + 35, { width: 40, align: 'center' });
@@ -659,6 +659,6 @@ function drawSobretensiones(doc: PDFKit.PDFDocument, x: number, y: number) {
     // 3. Connecting Line to Main (from Top)
     doc.moveTo(x + 6, centerY - 15).lineTo(x + 6, centerY - 25).lineTo(x - 25, centerY - 25).stroke();
 
-    doc.fontSize(7).font('Helvetica-Bold').text('Protección contra', x - 15, y + 30, { width: 50, align: 'center' });
+    doc.fillColor('black').fontSize(7).font('Helvetica-Bold').text('Protección contra', x - 15, y + 30, { width: 50, align: 'center' });
     doc.text('sobretensiones', x - 15, y + 38, { width: 50, align: 'center' });
 }
