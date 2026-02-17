@@ -27,6 +27,8 @@ import ExpedienteWizard from './pages/ExpedienteWizard';
 import ExpedienteDetail from './pages/ExpedienteDetail';
 import TechnicalForms from './pages/TechnicalForms';
 import AdminUsers from './pages/AdminUsers';
+import SchematicsList from './pages/SchematicsList';
+import SchematicEditorPage from './pages/SchematicEditorPage';
 
 function App() {
     return (
@@ -39,7 +41,12 @@ function App() {
                         <Route index element={<Dashboard />} />
                         <Route path="expedientes/new" element={<ExpedienteWizard />} />
                         <Route path="expedientes/:id" element={<ExpedienteDetail />} />
+                        <Route path="expedientes/:id" element={<ExpedienteDetail />} />
                         <Route path="expedientes/:id/technical" element={<TechnicalForms />} />
+
+                        {/* Independent Schematics Routes */}
+                        <Route path="esquemas" element={<SchematicsList />} />
+                        <Route path="esquemas/:id" element={<SchematicEditorPage />} />
 
                         {/* Admin Routes */}
                         <Route path="admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />

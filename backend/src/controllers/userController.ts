@@ -10,7 +10,14 @@ export const getUsers = async (req: Request, res: Response) => {
                 email: true,
                 name: true,
                 role: true,
+                isActive: true,
                 createdAt: true,
+                expedientesOperador: {
+                    select: { id: true, code: true, status: true, type: true, createdAt: true }
+                },
+                expedientesTecnico: {
+                    select: { id: true, code: true, status: true, type: true, createdAt: true }
+                }
             },
         });
         res.json(users);
@@ -21,7 +28,7 @@ export const getUsers = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
     try {
-        const { email, password, name, role } = req.body;
+        const { email, password, name, role, isActive } = req.body;
 
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
@@ -36,6 +43,7 @@ export const createUser = async (req: Request, res: Response) => {
                 password: hashedPassword,
                 name,
                 role,
+                isActive: isActive !== undefined ? isActive : true,
             },
         });
 
@@ -48,11 +56,14 @@ export const createUser = async (req: Request, res: Response) => {
 export const updateUser = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { email, name, role, password } = req.body;
+        const { email, name, role, password, isActive } = req.body;
 
         const data: any = { email, name, role };
         if (password) {
             data.password = await bcrypt.hash(password, 10);
+        }
+        if (isActive !== undefined) {
+            data.isActive = isActive;
         }
 
         await prisma.user.update({

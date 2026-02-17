@@ -1,11 +1,23 @@
 import { useEffect, useState } from 'react';
 import { getUsers, createUser, updateUser, deleteUser } from '../api';
 
+
+interface ExpedienteSummary {
+    id: string;
+    code: string;
+    status: string;
+    type: string;
+    createdAt: string;
+}
+
 interface User {
     id: string;
     name: string;
     email: string;
     role: 'ADMIN' | 'TECNICO' | 'OPERARIO';
+    isActive: boolean;
+    expedientesOperador: ExpedienteSummary[];
+    expedientesTecnico: ExpedienteSummary[];
 }
 
 export default function AdminUsers() {
@@ -13,7 +25,7 @@ export default function AdminUsers() {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'TECNICO' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'TECNICO', isActive: true });
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -63,13 +75,30 @@ export default function AdminUsers() {
 
     const openEdit = (user: User) => {
         setEditingUser(user);
-        setFormData({ name: user.name, email: user.email, password: '', role: user.role });
+        setFormData({ name: user.name, email: user.email, password: '', role: user.role, isActive: user.isActive });
         setIsModalOpen(true);
     };
 
     const resetForm = () => {
         setEditingUser(null);
-        setFormData({ name: '', email: '', password: '', role: 'TECNICO' });
+        setFormData({ name: '', email: '', password: '', role: 'TECNICO', isActive: true });
+    };
+
+    const toggleStatus = async (user: User) => {
+        try {
+            await updateUser(user.id, { isActive: !user.isActive });
+            fetchUsers();
+        } catch (err) {
+            console.error(err);
+            alert('Error al cambiar estado');
+        }
+    };
+
+    const getAllExpedientes = (user: User) => {
+        // Combine and dedup by ID (just in case, though usually roles are distinct per exp)
+        const all = [...(user.expedientesOperador || []), ...(user.expedientesTecnico || [])];
+        const unique = Array.from(new Map(all.map(item => [item.id, item])).values());
+        return unique.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     };
 
     return (
@@ -92,97 +121,171 @@ export default function AdminUsers() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Nombre</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Email</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Rol</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Estado</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">Boletines</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="bg-slate-900 divide-y divide-slate-800">
-                            {users.map(user => (
-                                <tr key={user.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-slate-200">{user.name}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-slate-400">{user.email}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                            ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                                            {user.role}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => openEdit(user)} className="text-sky-400 hover:text-sky-300 mr-4">Editar</button>
-                                        <button onClick={() => handleDelete(user.id)} className="text-red-400 hover:text-red-300">Eliminar</button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {users.map(user => {
+                                const expCount = (user.expedientesOperador?.length || 0) + (user.expedientesTecnico?.length || 0);
+                                return (
+                                    <tr key={user.id}>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <button
+                                                onClick={() => openEdit(user)}
+                                                className="text-sky-400 hover:text-sky-300 hover:underline font-medium text-left"
+                                            >
+                                                {user.name}
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-slate-400">{user.email}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
+                                                {user.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <button
+                                                onClick={() => toggleStatus(user)}
+                                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-colors
+                                                ${user.isActive ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'}`}
+                                            >
+                                                {user.isActive ? 'Activo' : 'Pendiente'}
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-center text-slate-400">
+                                            {expCount > 0 ? (
+                                                <span className="bg-slate-800 px-2 py-1 rounded text-xs">{expCount}</span>
+                                            ) : (
+                                                <span className="text-slate-600">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button onClick={() => openEdit(user)} className="text-sky-400 hover:text-sky-300 mr-4">Editar</button>
+                                            <button onClick={() => handleDelete(user.id)} className="text-red-400 hover:text-red-300">Eliminar</button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
             )}
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-950/80 overflow-y-auto h-full w-full flex items-center justify-center">
-                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-lg shadow-xl w-96">
-                        <h2 className="text-xl font-bold mb-4 text-slate-100">{editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
-                        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-4">
-                                <label className="block text-slate-300 text-sm font-bold mb-2">Nombre</label>
-                                <input
-                                    type="text"
-                                    className="shadow appearance-none border border-slate-700 rounded w-full py-2 px-3 text-slate-200 bg-slate-800 leading-tight focus:outline-none focus:shadow-outline"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    required
-                                />
+                <div className="fixed inset-0 bg-slate-950/80 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+                    <div className="bg-slate-900 border border-slate-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="p-6 border-b border-slate-800">
+                            <h2 className="text-xl font-bold text-slate-100">{editingUser ? 'Editar Usuario' : 'Nuevo Usuario'} <span className="text-xs text-slate-500 font-normal ml-2">(v2.2)</span></h2>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto flex-1">
+                            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Form Column */}
+                                <form id="userForm" onSubmit={handleSubmit} className="space-y-4">
+                                    <div>
+                                        <label className="block text-slate-300 text-sm font-bold mb-2">Nombre</label>
+                                        <input
+                                            type="text"
+                                            className="shadow appearance-none border border-slate-700 rounded w-full py-2 px-3 text-slate-200 bg-slate-800 leading-tight focus:outline-none focus:shadow-outline"
+                                            value={formData.name}
+                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-slate-300 text-sm font-bold mb-2">Email</label>
+                                        <input
+                                            type="email"
+                                            className="shadow appearance-none border border-slate-700 rounded w-full py-2 px-3 text-slate-200 bg-slate-800 leading-tight focus:outline-none focus:shadow-outline"
+                                            value={formData.email}
+                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-slate-300 text-sm font-bold mb-2">
+                                            Contraseña {editingUser && <span className="text-slate-500 font-normal">(dejar en blanco para no cambiar)</span>}
+                                        </label>
+                                        <input
+                                            type="password"
+                                            className="shadow appearance-none border border-slate-700 rounded w-full py-2 px-3 text-slate-200 bg-slate-800 leading-tight focus:outline-none focus:shadow-outline"
+                                            value={formData.password}
+                                            onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                            required={!editingUser}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-slate-300 text-sm font-bold mb-2">Rol</label>
+                                        <select
+                                            className="shadow border border-slate-700 rounded w-full py-2 px-3 text-slate-200 bg-slate-800 leading-tight focus:outline-none focus:shadow-outline"
+                                            value={formData.role}
+                                            onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                        >
+                                            <option value="TECNICO">Técnico</option>
+                                            <option value="ADMIN">Administrador</option>
+                                            <option value="OPERARIO">Operario</option>
+                                        </select>
+                                    </div>
+                                </form>
+
+                                {/* Expedientes Column */}
+                                {editingUser && (
+                                    <div className="border-t md:border-t-0 md:border-l border-slate-800 pt-8 md:pt-0 md:pl-8">
+                                        <h3 className="text-lg font-semibold text-slate-200 mb-4">Boletines Asignados</h3>
+                                        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                            {getAllExpedientes(editingUser).length === 0 ? (
+                                                <p className="text-slate-500 text-sm">No tiene boletines asignados.</p>
+                                            ) : (
+                                                getAllExpedientes(editingUser).map(exp => (
+                                                    <div
+                                                        key={exp.id}
+                                                        onClick={() => window.open(`/expedientes/${exp.id}`, '_blank')}
+                                                        className="p-3 bg-slate-950/50 rounded border border-slate-800 hover:border-sky-500/50 cursor-pointer transition-colors group"
+                                                    >
+                                                        <div className="flex justify-between items-start">
+                                                            <span className="font-mono text-xs text-sky-400 group-hover:underline">
+                                                                {exp.code || 'SIN CODIGO'}
+                                                            </span>
+                                                            <span className="text-[10px] text-slate-500">
+                                                                {new Date(exp.createdAt).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center mt-1">
+                                                            <span className="text-xs text-slate-300">{exp.type}</span>
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                                                                {exp.status}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="mb-4">
-                                <label className="block text-slate-300 text-sm font-bold mb-2">Email</label>
-                                <input
-                                    type="email"
-                                    className="shadow appearance-none border border-slate-700 rounded w-full py-2 px-3 text-slate-200 bg-slate-800 leading-tight focus:outline-none focus:shadow-outline"
-                                    value={formData.email}
-                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="mb-4">
-                                <label className="block text-slate-300 text-sm font-bold mb-2">
-                                    Contraseña {editingUser && <span className="text-slate-500 font-normal">(dejar en blanco para no cambiar)</span>}
-                                </label>
-                                <input
-                                    type="password"
-                                    className="shadow appearance-none border border-slate-700 rounded w-full py-2 px-3 text-slate-200 bg-slate-800 leading-tight focus:outline-none focus:shadow-outline"
-                                    value={formData.password}
-                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                    required={!editingUser}
-                                />
-                            </div>
-                            <div className="mb-6">
-                                <label className="block text-slate-300 text-sm font-bold mb-2">Rol</label>
-                                <select
-                                    className="shadow border border-slate-700 rounded w-full py-2 px-3 text-slate-200 bg-slate-800 leading-tight focus:outline-none focus:shadow-outline"
-                                    value={formData.role}
-                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                >
-                                    <option value="TECNICO">Técnico</option>
-                                    <option value="ADMIN">Administrador</option>
-                                    <option value="OPERARIO">Operario</option>
-                                </select>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                >
-                                    Guardar
-                                </button>
-                            </div>
-                        </form>
+                        </div>
+
+                        <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-4 py-2 bg-slate-800 text-slate-300 rounded hover:bg-slate-700 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                form="userForm"
+                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
+                            >
+                                Guardar Cambios
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

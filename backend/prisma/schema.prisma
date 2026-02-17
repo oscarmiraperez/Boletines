@@ -7,8 +7,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -82,11 +82,21 @@ model Expediente {
   cuadros         Cuadro[]
   verificaciones  Verificacion?
   documents       Document[]
+  photos          ExpedientePhoto[] // New relation
 
   mtdData         String?      // Changed from Json to String
 
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+}
+
+model ExpedientePhoto {
+  id              String     @id @default(uuid())
+  expedienteId    String
+  expediente      Expediente @relation(fields: [expedienteId], references: [id])
+  url             String
+  name            String
+  createdAt       DateTime   @default(now())
 }
 
 model Authorization {
@@ -183,6 +193,7 @@ model Verificacion {
   notes           String?
 }
 
+
 model Document {
   id              String     @id @default(uuid())
   expedienteId    String
@@ -191,4 +202,15 @@ model Document {
   type            String // MTD, SCHEMATIC, AUTH, PHOTO_ZIP
   path            String
   createdAt       DateTime   @default(now())
+}
+
+model Esquema {
+  id        String   @id @default(uuid())
+  name      String
+  client    String?
+  address   String?
+  power     String?
+  data      String   // JSON string with all technical data (cuadros, verificaciones, etc.)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

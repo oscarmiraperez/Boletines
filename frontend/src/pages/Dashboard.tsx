@@ -102,34 +102,45 @@ export default function Dashboard() {
                 </div>
             ) : (
                 /* Cards Grid (Mobile First) */
-                <div className="space-y-3 sm:space-y-0 sm:grid sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {expedientes.map((expediente) => (
                         <Link
                             key={expediente.id}
                             to={`/expedientes/${expediente.id}`}
-                            className="block w-full text-left rounded-xl bg-slate-900/80 border border-slate-800 px-4 py-3.5 shadow-sm shadow-slate-950/50 active:scale-[0.99] transition transform hover:border-slate-700"
+                            className="group relative flex flex-col justify-between rounded-xl bg-slate-900/80 border border-slate-800 px-4 py-4 shadow-sm shadow-slate-950/50 hover:border-slate-700 hover:shadow-md transition-all overflow-hidden"
                         >
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-xs font-semibold tracking-wide text-slate-200">
-                                            {expediente.code}
+                            <div className="mb-3">
+                                {/* Status Pill - Absolute positioned */}
+                                <div className="absolute top-4 right-4">
+                                    <EstadoPill estado={expediente.status} />
+                                </div>
+
+                                <div className="flex items-start justify-between gap-3 mb-2">
+                                    <div className="min-w-0 flex-1 pr-20"> {/* Added padding-right to avoid overlap */}
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm font-bold tracking-wide text-slate-100 truncate">
+                                                {expediente.code}
+                                            </p>
+                                            {expediente.authorization?.signaturePath && (
+                                                <span title="Firmado" className="text-xs shrink-0">✍️</span>
+                                            )}
+                                        </div>
+                                        <p className="mt-1 text-xs text-slate-400 font-medium truncate" title={expediente.client?.name}>
+                                            {expediente.client?.name || 'Cliente sin nombre'}
                                         </p>
-                                        {expediente.authorization?.signaturePath && (
-                                            <span title="Firmado" className="text-xs">✍️</span>
-                                        )}
                                     </div>
-                                    <p className="mt-0.5 text-[11px] text-slate-400 line-clamp-2 font-medium">
-                                        {expediente.client?.name || 'Cliente sin nombre'}
+                                </div>
+                                <div className="min-h-[2.5em]">
+                                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed break-words" title={expediente.installation?.address}>
+                                        {expediente.installation?.address || 'Sin dirección'}
                                     </p>
                                 </div>
-                                <EstadoPill estado={expediente.status} />
                             </div>
 
-                            <div className="mt-2 pt-2 border-t border-slate-800/50 flex items-center justify-between text-[11px] text-slate-500">
+                            <div className="mt-auto pt-3 border-t border-slate-800/50 flex items-center justify-between text-[10px] text-slate-500 uppercase tracking-wider font-medium">
                                 <span>{new Date(expediente.createdAt).toLocaleDateString('es-ES')}</span>
-                                <span className="flex items-center gap-1.5">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-sky-500"></span>
+                                <span className="flex items-center gap-1.5 text-sky-500/80">
+                                    <span className="h-1 w-1 rounded-full bg-sky-500"></span>
                                     <span>BT</span>
                                 </span>
                             </div>

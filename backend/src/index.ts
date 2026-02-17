@@ -49,12 +49,14 @@ import userRoutes from './routes/userRoutes';
 import expedienteRoutes from './routes/expedienteRoutes';
 import technicalRoutes from './routes/technicalRoutes';
 import documentRoutes from './routes/documentRoutes';
+import esquemaRoutes from './routes/esquemaRoutes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/expedientes', expedienteRoutes);
 app.use('/api/technical', technicalRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/esquemas', esquemaRoutes);
 
 // Basic health check route
 app.get('/api/health', (req: Request, res: Response) => {

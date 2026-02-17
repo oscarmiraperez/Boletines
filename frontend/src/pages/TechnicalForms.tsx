@@ -4,38 +4,70 @@ import { useParams } from 'react-router-dom';
 import { apiRequest, API_URL } from '../api';
 import CuadroModal from '../components/CuadroModal';
 
-export default function TechnicalForms() {
+interface TechnicalFormsProps {
+    initialData?: any;
+    onSaveMtd?: (data: any) => Promise<void>;
+    onSaveVerificaciones?: (data: any) => Promise<void>;
+    onDeleteCuadro?: (id: string) => Promise<void>;
+    onSaveCuadroComponents?: (id: string, data: any) => Promise<void>;
+    onCreateCuadro?: (name: string) => Promise<void>;
+    onGenerateSchematic?: () => Promise<void>;
+    standalone?: boolean; // If true, fetched data is handled by parent or different logic
+}
+
+export default function TechnicalForms({
+    initialData,
+    onSaveMtd: parentSaveMtd,
+    onSaveVerificaciones: parentSaveVerif,
+    onDeleteCuadro: parentDeleteCuadro,
+    onSaveCuadroComponents: parentSaveCuadroComponents,
+    onCreateCuadro: parentCreateCuadro,
+    onGenerateSchematic: parentGenerateSchematic,
+    standalone = false
+}: TechnicalFormsProps = {}) {
     const { id } = useParams();
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!standalone);
 
     // Medida y Tierra Form
     const { register: registerMtd, handleSubmit: submitMtd, reset: resetMtd } = useForm();
-    const [activeTab, setActiveTab] = useState('general');
+    const [activeTab, setActiveTab] = useState(standalone ? 'cuadros' : 'general');
     const [cuadros, setCuadros] = useState<any[]>([]);
 
     // Verificaciones Form
     const { register: registerVerif, handleSubmit: submitVerif, reset: resetVerif } = useForm();
 
     useEffect(() => {
-        fetchTechnicalData();
-    }, [id]);
+        if (standalone && initialData) {
+            loadData(initialData);
+            setLoading(false);
+        } else if (!standalone && id) {
+            fetchTechnicalData();
+        }
+    }, [id, standalone, initialData]);
 
-    const fetchTechnicalData = async () => {
-        try {
-            const data = await apiRequest(`/expedientes/${id}`);
-            if (data.cuadros) setCuadros(data.cuadros);
-            if (data.verificaciones) resetVerif(data.verificaciones);
+    const loadData = (data: any) => {
+        if (data.cuadros) setCuadros(data.cuadros);
+        if (data.verificaciones) resetVerif(data.verificaciones);
 
-            const mtd = data.mtdData || {};
-
+        const mtd = data.mtdData || {};
+        // Auto-fill from Installation data if available (only for Expedientes)
+        if (!standalone) {
             if (!mtd.titularNombre && data.installation?.client?.name) mtd.titularNombre = data.installation.client.name;
             if (!mtd.titularNif && data.installation?.client?.nif) mtd.titularNif = data.installation.client.nif;
             if (!mtd.direccion && data.installation?.address) mtd.direccion = data.installation.address;
             if (!mtd.potenciaPrevista && data.installation?.contractedPower) mtd.potenciaPrevista = data.installation.contractedPower;
-            if (!mtd.tensionNominal) mtd.tensionNominal = '230';
-            if (!mtd.usoInstalacion) mtd.usoInstalacion = 'vivienda';
+        }
 
-            resetMtd(mtd);
+        if (!mtd.tensionNominal) mtd.tensionNominal = '230';
+        if (!mtd.usoInstalacion) mtd.usoInstalacion = 'vivienda';
+
+        resetMtd(mtd);
+    };
+
+    const fetchTechnicalData = async () => {
+        try {
+            const data = await apiRequest(`/expedientes/${id}`);
+            loadData(data);
         } catch (error) {
             console.error(error);
         } finally {
@@ -44,6 +76,7 @@ export default function TechnicalForms() {
     };
 
     const onSaveVerificaciones = async (data: any) => {
+        if (parentSaveVerif) return parentSaveVerif(data);
         try {
             await apiRequest(`/technical/expedientes/${id}/verificaciones`, {
                 method: 'POST',
@@ -56,6 +89,10 @@ export default function TechnicalForms() {
     };
 
     const onSaveMtd = async (data: any) => {
+        if (parentSaveMtd) {
+            // For independent schematics, we might need to sync "general" fields (client, address) with the MTD data
+            return parentSaveMtd(data);
+        }
         try {
             await apiRequest(`/expedientes/${id}`, {
                 method: 'PUT',
@@ -70,6 +107,15 @@ export default function TechnicalForms() {
 
     const deleteCuadro = async (cuadroId: string) => {
         if (!confirm('¿Seguro que quieres borrar este cuadro?')) return;
+        if (parentDeleteCuadro) {
+            await parentDeleteCuadro(cuadroId);
+            // Parent should trigger reload or we update local state?
+            // Ideally parent updates initialData, but here we might need to manually refresh or trust parent.
+            // For standalone, we might simply update local state if it's not server-synced instantly?
+            // Assuming server sync for consistency.
+            if (!standalone) fetchTechnicalData();
+            return;
+        }
         try {
             await apiRequest(`/technical/cuadros/${cuadroId}`, { method: 'DELETE' });
             fetchTechnicalData();
@@ -82,6 +128,11 @@ export default function TechnicalForms() {
 
     const onSaveCuadroComponents = async (data: any) => {
         if (!editingCuadro) return;
+        if (parentSaveCuadroComponents) {
+            await parentSaveCuadroComponents(editingCuadro.id, data);
+            setEditingCuadro(null);
+            return;
+        }
         try {
             await apiRequest(`/technical/cuadros/${editingCuadro.id}/components`, {
                 method: 'PUT',
@@ -96,9 +147,54 @@ export default function TechnicalForms() {
         }
     };
 
+    const handleCreateCuadro = async () => {
+        const name = prompt('Nombre del cuadro (Ej: General)');
+        if (!name) return;
+
+        if (parentCreateCuadro) {
+            await parentCreateCuadro(name);
+            return;
+        }
+
+        try {
+            await apiRequest(`/technical/expedientes/${id}/cuadros`, {
+                method: 'POST',
+                body: JSON.stringify({ name, description: '' })
+            });
+            fetchTechnicalData();
+        } catch (e) {
+            alert('Error creando cuadro');
+        }
+    };
+
+    const handleGenerateSchematic = async () => {
+        if (parentGenerateSchematic) {
+            return parentGenerateSchematic();
+        }
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_URL}/documents/expedientes/${id}/schematic/generate`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error('Error generando esquema');
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `esquema-${id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            alert('Error al descargar esquema');
+        }
+    };
+
+
     if (loading) return <div className="text-slate-400">Cargando...</div>;
 
-    const tabs = [
+    const allTabs = [
         { id: 'general', name: 'General' },
         { id: 'enlace', name: 'Enlace' },
         { id: 'medida', name: 'Medida/Tierra' },
@@ -106,6 +202,10 @@ export default function TechnicalForms() {
         { id: 'cuadros', name: 'Cuadros' },
         { id: 'verificaciones', name: 'Verific.' }
     ];
+
+    const tabs = standalone
+        ? allTabs.filter(t => ['general', 'cuadros'].includes(t.id))
+        : allTabs;
 
     const inputClasses = "mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950/60 text-slate-50 placeholder:text-slate-500 shadow-sm focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm px-3 py-2.5 transition-all";
     const labelClasses = "block text-xs font-medium text-slate-400 mb-1";
@@ -184,8 +284,8 @@ export default function TechnicalForms() {
                             <div className="sm:col-span-2">
                                 <label className={labelClasses}>Tensión</label>
                                 <select {...registerMtd('tensionNominal')} className={inputClasses}>
-                                    <option value="230">230 V (Monofásica)</option>
-                                    <option value="400">400 V (Trifásica)</option>
+                                    <option value="230">230 V (Monofásico)</option>
+                                    <option value="400">400 V (Trifásico)</option>
                                 </select>
                             </div>
                             <div className="sm:col-span-3">
@@ -388,41 +488,13 @@ export default function TechnicalForms() {
                         <h3 className={sectionTitleClasses.replace('mb-4', 'mb-0 border-b-0')}>Cuadros Eléctricos</h3>
                         <div className="flex gap-2">
                             <button
-                                onClick={async () => {
-                                    const name = prompt('Nombre del cuadro (Ej: General)');
-                                    if (name) {
-                                        await apiRequest(`/technical/expedientes/${id}/cuadros`, {
-                                            method: 'POST',
-                                            body: JSON.stringify({ name, description: '' })
-                                        });
-                                        fetchTechnicalData();
-                                    }
-                                }}
+                                onClick={handleCreateCuadro}
                                 className="text-xs sm:text-sm bg-sky-600 hover:bg-sky-500 text-white px-3 py-2 rounded-lg transition-colors"
                             >
                                 + Añadir Cuadro
                             </button>
                             <button
-                                onClick={async () => {
-                                    try {
-                                        const token = localStorage.getItem('token');
-                                        const response = await fetch(`${API_URL}/documents/expedientes/${id}/schematic/generate`, {
-                                            method: 'POST',
-                                            headers: { 'Authorization': `Bearer ${token}` }
-                                        });
-                                        if (!response.ok) throw new Error('Error generando esquema');
-                                        const blob = await response.blob();
-                                        const url = window.URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.href = url;
-                                        a.download = `esquema-${id}.pdf`;
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        window.URL.revokeObjectURL(url);
-                                    } catch (error) {
-                                        alert('Error al descargar esquema');
-                                    }
-                                }}
+                                onClick={handleGenerateSchematic}
                                 className="text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-lg transition-colors"
                             >
                                 📄 Esquema

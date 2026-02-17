@@ -232,18 +232,31 @@ export const createExpediente = async (req: AuthRequest, res: Response) => {
     }
 };
 
-export const updateExpediente = async (req: Request, res: Response) => {
+export const updateExpediente = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
+        const { role, id: userId } = req.user;
+
+        // RBAC Verification
+        if (role === 'TECNICO') {
+            const existing = await prisma.expediente.findUnique({
+                where: { id },
+                select: { operatorId: true, technicalId: true }
+            });
+
+            if (!existing) return res.status(404).json({ error: 'Expediente not found' });
+
+            if (existing.operatorId !== userId && existing.technicalId !== userId) {
+                return res.status(403).json({ error: 'No tienes permiso para modificar este expediente' });
+            }
+        }
+
         const data = { ...req.body }; // Clone to avoid mutation if referenced elsewhere
 
         // Stringify mtdData if present (SQLite workaround)
         if (data.mtdData && typeof data.mtdData === 'object') {
             data.mtdData = JSON.stringify(data.mtdData);
         }
-
-        // Prevent updating immutable fields if necessary
-        // Explicitly handle status updates
 
         const updated = await prisma.expediente.update({
             where: { id },
@@ -257,9 +270,21 @@ export const updateExpediente = async (req: Request, res: Response) => {
     }
 };
 
-export const deleteExpediente = async (req: Request, res: Response) => {
+export const deleteExpediente = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
+        const { role } = req.user;
+
+        // RBAC: Only ADMIN can delete (soft delete)
+        // Or maybe OFICINA too? Let's restrict to ADMIN for safety as requested "Operar solo sobre sus propios..."
+        // but typically delete is sensitive. Let's allow ADMIN only for now, or based on strict requirements.
+        // User said: "Operar solo sobre sus propios expedientes o también sobre los expedientes de otros usuarios"
+        // Let's assume TECNICO cannot delete.
+
+        if (role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Solo los administradores pueden eliminar expedientes' });
+        }
+
         // Soft delete
         await prisma.expediente.update({
             where: { id },
