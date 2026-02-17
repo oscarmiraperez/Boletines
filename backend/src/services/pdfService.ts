@@ -3,6 +3,13 @@ import { PDFDocument as PDFLibDocument, PDFTextField, PDFCheckBox, PDFRadioGroup
 import fs from 'fs';
 import path from 'path';
 
+const logDebug = (msg: string) => {
+    const logPath = path.join(process.cwd(), 'pdf_debug.txt');
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(logPath, `[${timestamp}] ${msg}\n`);
+    console.log(`[DEBUG] ${msg}`);
+};
+
 export const fillOfficialMTD = async (data: any, outputPath: string) => {
     try {
         const templatePath = path.join(process.cwd(), 'templates/memoria en blanco.pdf');
@@ -190,52 +197,68 @@ export const fillOfficialMTD = async (data: any, outputPath: string) => {
         // MERGE SCHEMATIC
         // ---------------------------------------------------------
         try {
+            logDebug('Starting Schematic Merge...');
             const schematicPath = outputPath.replace('.pdf', '_schematic.pdf');
             // Pass full data to use it in the title block
             await generateSchematicPDF(data, schematicPath);
 
             if (fs.existsSync(schematicPath)) {
+                logDebug('Schematic PDF generated. Merging...');
                 const schematicBytes = fs.readFileSync(schematicPath);
                 const schematicPdf = await PDFLibDocument.load(schematicBytes);
                 const copiedPages = await pdfDoc.copyPages(schematicPdf, schematicPdf.getPageIndices());
                 copiedPages.forEach((page) => pdfDoc.addPage(page));
                 fs.unlinkSync(schematicPath);
+                logDebug('Schematic Merge Complete.');
+            } else {
+                logDebug('Schematic file NOT FOUND after generation.');
             }
         } catch (schematicError) {
             console.error('Error generating/merging schematic:', schematicError);
+            logDebug(`Error merging schematic: ${schematicError}`);
         }
 
         // ---------------------------------------------------------
         // MERGE AUTHORIZATION (New Requirement)
         // ---------------------------------------------------------
         try {
+            logDebug('Starting Authorization Merge...');
             const authPath = outputPath.replace('.pdf', '_auth.pdf');
             // Generate Auth PDF using existing helper
             await generateAuthorizationPDF(data, authPath);
 
             if (fs.existsSync(authPath)) {
+                logDebug('Authorization PDF generated. Merging...');
                 const authBytes = fs.readFileSync(authPath);
                 const authPdf = await PDFLibDocument.load(authBytes);
                 const copiedAuthPages = await pdfDoc.copyPages(authPdf, authPdf.getPageIndices());
                 copiedAuthPages.forEach((page) => pdfDoc.addPage(page));
                 fs.unlinkSync(authPath);
+                logDebug('Authorization Merge Complete.');
+            } else {
+                logDebug('Authorization file NOT FOUND after generation.');
             }
         } catch (authError) {
             console.error('Error generating/merging authorization:', authError);
+            logDebug(`Error merging authorization: ${authError}`);
         }
 
         const pdfBytesFinal = await pdfDoc.save();
         fs.writeFileSync(outputPath, pdfBytesFinal);
-
+        logDebug(`Final MTD saved to ${outputPath}`);
         return outputPath;
 
     } catch (error) {
-        console.error('Error filling MTD template:', error);
+        logDebug(`Error filling MTD template: ${error}`);
         throw error;
     }
 };
 
 export const generateSchematicPDF = async (data: any, outputPath: string) => {
+    logDebug(`Generating Schematic PDF at ${outputPath}`);
+    if (data.cuadros) logDebug(`Cuadros count: ${data.cuadros.length}`);
+    else logDebug('No cuadros data in generateSchematicPDF');
+
     return new Promise((resolve, reject) => {
         // A4 size: 595.28 x 841.89 points
         const doc = new PDFDocument({ autoFirstPage: true, size: 'A4', margin: 40 });
@@ -245,47 +268,52 @@ export const generateSchematicPDF = async (data: any, outputPath: string) => {
 
         // Helper to draw frame and title block (cajetín) on current page
         const drawFrameAndTitleBlock = () => {
-            // Save current margins and set to 0 to prevents auto-page-add when drawing near bottom
-            const originalMargins = { ...doc.page.margins };
-            doc.page.margins = { top: 0, bottom: 0, left: 0, right: 0 };
+            try {
+                // Save current margins and set to 0 to prevents auto-page-add when drawing near bottom
+                const originalMargins = { ...doc.page.margins };
+                doc.page.margins = { top: 0, bottom: 0, left: 0, right: 0 };
 
-            const pageWidth = 595.28;
-            const pageHeight = 841.89;
-            const margin = 20;
+                const pageWidth = 595.28;
+                const pageHeight = 841.89;
+                const margin = 20;
 
-            // 1. Frame (Border)
-            doc.rect(margin, margin, pageWidth - (margin * 2), pageHeight - (margin * 2)).stroke();
+                // 1. Frame (Border)
+                doc.rect(margin, margin, pageWidth - (margin * 2), pageHeight - (margin * 2)).stroke();
 
-            // 2. Title Block (Cajetín) - Bottom Right Corner
-            const titleBlockHeight = 80;
-            const titleBlockWidth = 250;
-            const titleBlockX = pageWidth - margin - titleBlockWidth;
-            const titleBlockY = pageHeight - margin - titleBlockHeight;
+                // 2. Title Block (Cajetín) - Bottom Right Corner
+                const titleBlockHeight = 80;
+                const titleBlockWidth = 250;
+                const titleBlockX = pageWidth - margin - titleBlockWidth;
+                const titleBlockY = pageHeight - margin - titleBlockHeight;
 
-            doc.rect(titleBlockX, titleBlockY, titleBlockWidth, titleBlockHeight).fillAndStroke('white', 'black');
+                doc.rect(titleBlockX, titleBlockY, titleBlockWidth, titleBlockHeight).fillAndStroke('white', 'black');
 
-            // Content of Title Block
-            doc.fillColor('black').fontSize(8).font('Helvetica-Bold');
+                // Content of Title Block
+                doc.fillColor('black').fontSize(8).font('Helvetica-Bold');
 
-            // Row 1: Empresa
-            doc.text('EMPRESA INSTALADORA:', titleBlockX + 5, titleBlockY + 5);
-            doc.font('Helvetica').fontSize(8).text('INSTALACIONES Y SUMINISTROS ELÉCTRICOS SAN VICENTE', titleBlockX + 5, titleBlockY + 15, { width: titleBlockWidth - 10 });
+                // Row 1: Empresa
+                doc.text('EMPRESA INSTALADORA:', titleBlockX + 5, titleBlockY + 5);
+                doc.font('Helvetica').fontSize(8).text('INSTALACIONES Y SUMINISTROS ELÉCTRICOS SAN VICENTE', titleBlockX + 5, titleBlockY + 15, { width: titleBlockWidth - 10 });
 
-            // Row 2: Cliente / Ubicación
-            doc.font('Helvetica-Bold').text('TITULAR:', titleBlockX + 5, titleBlockY + 30);
-            doc.font('Helvetica').text(data.clientName || '', titleBlockX + 50, titleBlockY + 30);
+                // Row 2: Cliente / Ubicación
+                doc.font('Helvetica-Bold').text('TITULAR:', titleBlockX + 5, titleBlockY + 30);
+                doc.font('Helvetica').text(data.clientName || '', titleBlockX + 50, titleBlockY + 30);
 
-            doc.font('Helvetica-Bold').text('UBICACIÓN:', titleBlockX + 5, titleBlockY + 45);
-            doc.font('Helvetica').text(data.address || '', titleBlockX + 60, titleBlockY + 45, { width: titleBlockWidth - 65, height: 10, ellipsis: true });
+                doc.font('Helvetica-Bold').text('UBICACIÓN:', titleBlockX + 5, titleBlockY + 45);
+                doc.font('Helvetica').text(data.address || '', titleBlockX + 60, titleBlockY + 45, { width: titleBlockWidth - 65, height: 10, ellipsis: true });
 
-            // Row 3: Potencia
-            // Use contractedPower from data or installation object
-            const power = data.contractedPower || (data.installation ? data.installation.contractedPower : '') || 'TODO';
-            doc.font('Helvetica-Bold').text('POTENCIA TOTAL:', titleBlockX + 5, titleBlockY + 60);
-            doc.font('Helvetica').text(`${power} kW`, titleBlockX + 85, titleBlockY + 60);
+                // Row 3: Potencia
+                // Use contractedPower from data or installation object
+                const power = data.contractedPower || (data.installation ? data.installation.contractedPower : '') || 'TODO';
+                doc.font('Helvetica-Bold').text('POTENCIA TOTAL:', titleBlockX + 5, titleBlockY + 60);
+                doc.font('Helvetica').text(`${power} kW`, titleBlockX + 85, titleBlockY + 60);
 
-            // Restore margins
-            doc.page.margins = originalMargins;
+                // Restore margins
+                doc.page.margins = originalMargins;
+            } catch (err) {
+                logDebug(`Error drawing frame: ${err}`);
+                // Don't reject here, just log, otherwise it crashes loop
+            }
         };
 
         // Event listener for adding pages to ensure frame is drawn on every page
@@ -302,102 +330,111 @@ export const generateSchematicPDF = async (data: any, outputPath: string) => {
         const startX = 50;
         let currentY = 100;
 
-        if (data.cuadros && data.cuadros.length > 0) {
-            data.cuadros.forEach((cuadro: any) => {
-                // Check for page overflow relative to title block area (approx 740 to leave space)
-                if (currentY > 700) {
-                    doc.addPage();
-                    currentY = 50;
-                }
+        try {
+            if (data.cuadros && data.cuadros.length > 0) {
+                data.cuadros.forEach((cuadro: any) => {
+                    // Check for page overflow relative to title block area (approx 740 to leave space)
+                    if (currentY > 700) {
+                        doc.addPage();
+                        currentY = 50;
+                    }
 
-                doc.font('Helvetica-Bold').fontSize(12).text(`Cuadro: ${cuadro.name}`, startX, currentY);
-                currentY += 40;
+                    doc.font('Helvetica-Bold').fontSize(12).text(`Cuadro: ${cuadro.name}`, startX, currentY);
+                    currentY += 40;
 
-                const iga = cuadro.mainBreaker;
-                const igaAmps = iga ? iga.amperage : 0;
-                const igaPoles = iga ? iga.poles : 2;
+                    const iga = cuadro.mainBreaker;
+                    const igaAmps = iga ? iga.amperage : 0;
+                    const igaPoles = iga ? iga.poles : 2;
 
-                drawMagnetotermico(doc, startX + 40, currentY, 'IGA', igaAmps, igaPoles);
-                doc.moveTo(startX, currentY + 15).lineTo(startX + 40, currentY + 15).stroke();
+                    drawMagnetotermico(doc, startX + 40, currentY, 'IGA', igaAmps, igaPoles);
+                    doc.moveTo(startX, currentY + 15).lineTo(startX + 40, currentY + 15).stroke();
 
-                // Draw Surge Protector (Sobretensiones) between IGA and IDs
-                const surgeX = startX + 80;
-                drawSobretensiones(doc, surgeX, currentY);
-                doc.moveTo(startX + 70, currentY + 15).lineTo(surgeX, currentY + 15).stroke();
-                doc.moveTo(surgeX + 15, currentY + 15).lineTo(startX + 120, currentY + 15).stroke();
+                    // Draw Surge Protector (Sobretensiones) between IGA and IDs
+                    const surgeX = startX + 80;
+                    drawSobretensiones(doc, surgeX, currentY);
+                    doc.moveTo(startX + 70, currentY + 15).lineTo(surgeX, currentY + 15).stroke();
+                    doc.moveTo(surgeX + 15, currentY + 15).lineTo(startX + 120, currentY + 15).stroke();
 
-                const diffs = cuadro.differentials || [];
-                if (diffs.length > 0) {
-                    let busX = startX + 120;
-                    let busY = currentY + 15;
+                    const diffs = cuadro.differentials || [];
+                    if (diffs.length > 0) {
+                        let busX = startX + 120;
+                        let busY = currentY + 15;
 
-                    diffs.forEach((diff: any) => {
-                        if (currentY > 750) {
-                            doc.addPage();
-                            currentY = 50;
-                            busY = currentY;
-                        }
+                        diffs.forEach((diff: any) => {
+                            if (currentY > 750) {
+                                doc.addPage();
+                                currentY = 50;
+                                busY = currentY;
+                            }
 
-                        doc.moveTo(busX, busY).lineTo(busX, currentY + 50).stroke();
-                        busY = currentY + 50;
+                            doc.moveTo(busX, busY).lineTo(busX, currentY + 50).stroke();
+                            busY = currentY + 50;
 
-                        doc.moveTo(busX, busY).lineTo(busX + 30, busY).stroke();
+                            doc.moveTo(busX, busY).lineTo(busX + 30, busY).stroke();
 
-                        const diffAmps = diff.amperage || 0;
-                        const diffSens = diff.sensitivity || 30;
-                        const diffPoles = diff.poles || 2;
+                            const diffAmps = diff.amperage || 0;
+                            const diffSens = diff.sensitivity || 30;
+                            const diffPoles = diff.poles || 2;
 
-                        drawDiferencial(doc, busX + 30, busY - 15, 'ID', diffAmps, diffSens, diffPoles);
-                        doc.moveTo(busX + 60, busY).lineTo(busX + 90, busY).stroke();
+                            drawDiferencial(doc, busX + 30, busY - 15, 'ID', diffAmps, diffSens, diffPoles);
+                            doc.moveTo(busX + 60, busY).lineTo(busX + 90, busY).stroke();
 
-                        const circuits = diff.circuits || [];
-                        if (circuits.length > 0) {
-                            let circBusX = busX + 90;
-                            let circBusBottomY = busY + Math.max(0, (circuits.length - 1) * 60);
+                            const circuits = diff.circuits || [];
+                            if (circuits.length > 0) {
+                                let circBusX = busX + 90;
+                                let circBusBottomY = busY + Math.max(0, (circuits.length - 1) * 60);
 
-                            doc.moveTo(circBusX, busY).lineTo(circBusX, circBusBottomY).stroke();
+                                doc.moveTo(circBusX, busY).lineTo(circBusX, circBusBottomY).stroke();
 
-                            circuits.forEach((circ: any, idx: number) => {
-                                let circY = busY + (idx * 60);
-                                doc.moveTo(circBusX, circY).lineTo(circBusX + 30, circY).stroke();
+                                circuits.forEach((circ: any, idx: number) => {
+                                    let circY = busY + (idx * 60);
+                                    doc.moveTo(circBusX, circY).lineTo(circBusX + 30, circY).stroke();
 
-                                const circAmps = circ.amperage || 0;
-                                const circPoles = circ.poles || 2;
-                                const circName = circ.name || `C${idx + 1}`;
-                                const circDesc = circ.description || '';
+                                    const circAmps = circ.amperage || 0;
+                                    const circPoles = circ.poles || 2;
+                                    const circName = circ.name || `C${idx + 1}`;
+                                    const circDesc = circ.description || '';
 
-                                // Draw Magnetotermico WITHOUT label below (we'll put it at the end)
-                                drawMagnetotermico(doc, circBusX + 30, circY - 15, '', circAmps, circPoles);
+                                    // Draw Magnetotermico WITHOUT label below (we'll put it at the end)
+                                    drawMagnetotermico(doc, circBusX + 30, circY - 15, '', circAmps, circPoles);
 
-                                // Text for section if exists
-                                if (circ.section) {
-                                    doc.fontSize(7).text(`${circ.section}mm²`, circBusX + 75, circY + 10);
-                                }
+                                    // Text for section if exists
+                                    if (circ.section) {
+                                        doc.fontSize(7).text(`${circ.section}mm²`, circBusX + 75, circY + 10);
+                                    }
 
-                                doc.moveTo(circBusX + 60, circY).lineTo(circBusX + 150, circY).stroke();
+                                    doc.moveTo(circBusX + 60, circY).lineTo(circBusX + 150, circY).stroke();
 
-                                // Label at the end (C1, C2...)
-                                doc.fontSize(9).font('Helvetica-Bold').text(circName, circBusX + 155, circY - 4);
-                                // Description below the label
-                                doc.fontSize(8).font('Helvetica').text(circDesc, circBusX + 160, circY + 8);
-                            });
-                            currentY = Math.max(currentY + 80, busY + (circuits.length * 60));
-                        } else {
-                            currentY += 80;
-                        }
-                    });
-                } else {
-                    currentY += 60;
-                }
-                currentY += 20;
-            });
-        } else {
-            doc.text('No hay cuadros configurados para el esquema.', startX, currentY);
+                                    // Label at the end (C1, C2...)
+                                    doc.fontSize(9).font('Helvetica-Bold').text(circName, circBusX + 155, circY - 4);
+                                    // Description below the label
+                                    doc.fontSize(8).font('Helvetica').text(circDesc, circBusX + 160, circY + 8);
+                                });
+                                currentY = Math.max(currentY + 80, busY + (circuits.length * 60));
+                            } else {
+                                currentY += 80;
+                            }
+                        });
+                    } else {
+                        currentY += 60;
+                    }
+                    currentY += 20;
+                });
+            } else {
+                doc.text('No hay cuadros configurados para el esquema.', startX, currentY);
+            }
+        } catch (drawError) {
+            logDebug(`Error drawing components: ${drawError}`);
+            reject(drawError);
+            return;
         }
 
         doc.end();
         stream.on('finish', () => resolve(outputPath));
-        stream.on('error', reject);
+        stream.on('error', (err) => {
+            logDebug(`Stream error in generateSchematicPDF: ${err}`);
+            reject(err);
+        });
     });
 };
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiRequest } from '../api';
+import { apiRequest, API_URL } from '../api';
 import CuadroModal from '../components/CuadroModal';
 
 // Simplified for brevity, normally split into sub-components
@@ -439,23 +439,63 @@ export default function TechnicalForms() {
 
             {activeTab === 'cuadros' && (
                 <div>
-                    <div className="mb-4">
+                    <div className="mb-4 flex justify-between items-center">
                         <h3 className="text-lg font-medium">Cuadros Eléctricos</h3>
-                        <button
-                            onClick={async () => {
-                                const name = prompt('Nombre del cuadro (Ej: General Vivienda)');
-                                if (name) {
-                                    await apiRequest(`/technical/expedientes/${id}/cuadros`, {
-                                        method: 'POST',
-                                        body: JSON.stringify({ name, description: '' })
-                                    });
-                                    fetchTechnicalData();
-                                }
-                            }}
-                            className="mt-2 text-sm text-blue-600 hover:underline"
-                        >
-                            + Añadir Cuadro
-                        </button>
+                        <div className="space-x-4">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const token = localStorage.getItem('token');
+                                        if (!token) {
+                                            alert('No hay sesión activa. Por favor, inicia sesión.');
+                                            return;
+                                        }
+
+                                        const response = await fetch(`${API_URL}/documents/expedientes/${id}/schematic/generate`, {
+                                            method: 'POST',
+                                            headers: { 'Authorization': `Bearer ${token}` }
+                                        });
+
+                                        if (response.status === 401 || response.status === 403) {
+                                            alert('Tu sesión ha expirado o el token es inválido. Por favor, cierra sesión y vuelve a entrar.');
+                                            return;
+                                        }
+
+                                        if (!response.ok) throw new Error('Error generando esquema');
+
+                                        const blob = await response.blob();
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = `esquema-${id}.pdf`;
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                    } catch (error) {
+                                        console.error('Download error:', error);
+                                        alert('Error al descargar el esquema (ver consola).');
+                                    }
+                                }}
+                                className="text-sm text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded border border-indigo-200"
+                            >
+                                📄 Descargar Esquema
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    const name = prompt('Nombre del cuadro (Ej: General Vivienda)');
+                                    if (name) {
+                                        await apiRequest(`/technical/expedientes/${id}/cuadros`, {
+                                            method: 'POST',
+                                            body: JSON.stringify({ name, description: '' })
+                                        });
+                                        fetchTechnicalData();
+                                    }
+                                }}
+                                className="text-sm text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded"
+                            >
+                                + Añadir Cuadro
+                            </button>
+                        </div>
                     </div>
 
                     <ul className="space-y-2">

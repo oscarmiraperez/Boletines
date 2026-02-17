@@ -5,6 +5,13 @@ import fs from 'fs';
 import { generateAuthorizationPDF, fillOfficialMTD } from '../services/pdfService';
 import prisma from '../db';
 
+const logDebug = (msg: string) => {
+    const logPath = path.join(process.cwd(), 'pdf_debug.txt');
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(logPath, `[${timestamp}] [CONTROLLER] ${msg}\n`);
+    console.log(`[DEBUG] ${msg}`);
+};
+
 // Configure Multer for uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -148,6 +155,7 @@ export const generateMTDDoc = async (req: Request, res: Response) => {
             include: {
                 installation: { include: { client: true } },
                 derivacion: true,
+                authorization: true,
                 cuadros: {
                     include: {
                         mainBreaker: true,
@@ -219,6 +227,13 @@ export const generateMTDDoc = async (req: Request, res: Response) => {
             tierraSeccion: mtdJson.tierraSeccion || 0,
         };
 
+        // Resolve paths (handle relative vs absolute)
+        const resolvePath = (filePath: string | null | undefined) => {
+            if (!filePath) return undefined;
+            if (path.isAbsolute(filePath)) return filePath;
+            return path.join(process.cwd(), filePath);
+        };
+
         const data = {
             clientName: expediente.installation.client.name,
             clientNif: expediente.installation.client.nif,
@@ -227,6 +242,10 @@ export const generateMTDDoc = async (req: Request, res: Response) => {
             municipality: expediente.installation.municipality,
             postalCode: expediente.installation.postalCode,
             contractedPower: expediente.installation.contractedPower,
+
+            // Authorization Data for merging
+            signaturePath: resolvePath(expediente.authorization?.signaturePath),
+            dniPath: resolvePath(expediente.authorization?.idCardPath),
 
             mtdData: mtdDataMap, // Pass the specific mapped data
             cuadros: expediente.cuadros, // Pass full objects for table mapping
@@ -248,5 +267,52 @@ export const generateMTDDoc = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('[generateMTDDoc] Error:', error);
         res.status(500).json({ error: 'Error generating MTD', details: String(error) });
+    }
+};
+
+export const generateSchematicDoc = async (req: Request, res: Response) => {
+    try {
+        const { expedienteId } = req.params;
+        const { generateSchematicPDF } = require('../services/pdfService'); // Lazy load to avoid cycle if any
+
+        const expediente = await prisma.expediente.findUnique({
+            where: { id: expedienteId },
+            include: {
+                installation: { include: { client: true } },
+                cuadros: {
+                    include: {
+                        mainBreaker: true,
+                        differentials: { include: { circuits: true } }
+                    }
+                }
+            }
+        });
+
+        if (!expediente) return res.status(404).json({ error: 'Expediente not found' });
+
+        const data = {
+            clientName: expediente.installation.client.name,
+            address: expediente.installation.address,
+            contractedPower: expediente.installation.contractedPower,
+            cuadros: expediente.cuadros
+        };
+
+        const outputDir = path.join(process.cwd(), 'generated_docs');
+        if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+        const safeCode = expediente.code.replace(/[^a-zA-Z0-9]/g, '_');
+        const outputPath = path.join(outputDir, `schematic-${safeCode}.pdf`);
+
+        await generateSchematicPDF(data, outputPath);
+
+        res.download(outputPath);
+
+    } catch (error) {
+        console.error('[generateSchematicDoc] Error:', error);
+        logDebug(`[generateSchematicDoc] Error: ${error}`);
+        if (error instanceof Error) {
+            logDebug(`Stack: ${error.stack}`);
+        }
+        res.status(500).json({ error: 'Error generating Schematic', details: String(error) });
     }
 };
