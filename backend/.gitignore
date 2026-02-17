@@ -12,6 +12,7 @@ generated_docs/*
 
 # Temp Files
 *.pdf
+!templates/*.pdf
 *.db
 prisma/*.db
 temp_output/
