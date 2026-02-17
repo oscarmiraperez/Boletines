@@ -137,8 +137,27 @@ export const createExpediente = async (req: AuthRequest, res: Response) => {
 
         const operatorId = req.user.id;
 
-        // Generate a simple internal code (e.g., EXP-{timestamp})
-        const code = `EXP-${Date.now()}`;
+        // Generate YYMM-XXXX code
+        const date = new Date();
+        const yy = date.getFullYear().toString().slice(-2);
+        const mm = (date.getMonth() + 1).toString().padStart(2, '0');
+        const prefix = `${yy}${mm}-`;
+
+        // Find last code with this prefix
+        const lastExpediente = await prisma.expediente.findFirst({
+            where: { code: { startsWith: prefix } },
+            orderBy: { code: 'desc' }
+        });
+
+        let nextSequence = 1;
+        if (lastExpediente) {
+            const parts = lastExpediente.code.split('-');
+            if (parts.length === 2 && !isNaN(parseInt(parts[1]))) {
+                nextSequence = parseInt(parts[1]) + 1;
+            }
+        }
+
+        const code = `${prefix}${nextSequence.toString().padStart(4, '0')}`;
 
         // Transaction to create Client, Installation, and Expediente
         const result = await prisma.$transaction(async (tx) => {
