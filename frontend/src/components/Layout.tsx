@@ -18,7 +18,7 @@ export default function Layout() {
                                     Boletines
                                 </span>
                                 <span className="block text-[10px] uppercase tracking-[0.22em] text-slate-500">
-                                    San Vicente
+                                    PWA · LV
                                 </span>
                             </div>
                         </Link>
