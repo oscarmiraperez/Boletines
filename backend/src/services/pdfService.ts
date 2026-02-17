@@ -138,321 +138,260 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
 
 // --- SYMBOL DRAWING FUNCTIONS (UNE STANDARD) ---
 
-// Magnetotermico: Diagonal switch (line + X/half-arrow) + Semi-circle/Square for Thermal/Magnetic
-function drawMagnetotermico(doc: PDFKit.PDFDocument, x: number, y: number, label: string, amperage: number, poles: number) {
-    const size = 10;
+const drawSymbolText = (doc: PDFKit.PDFDocument, text: string, x: number, y: number, size: number = 6, align: 'center' | 'left' | 'right' = 'center') => {
+    doc.font('Helvetica').fontSize(size).fillColor('black').text(text, x - 20, y, { width: 40, align });
+};
 
-    // Symbol Structure:
+// Magnetothermic: Symbol with curve and square
+const drawMagnetotermico = (doc: PDFKit.PDFDocument, x: number, y: number, label: string, amperage: number, poles: number) => {
+    doc.save();
+    doc.translate(x, y);
+
     // Line in
-    // Switch (Diagonal)
-    // Cross/Curve (Thermal/Magnetic)
-    // Line out
+    doc.moveTo(0, -10).lineTo(0, -5).strokeColor('black').stroke();
 
-    doc.save();
-    doc.translate(x, y);
+    // Switch symbol
+    doc.moveTo(0, -5).lineTo(5, 5).stroke(); // Blade
+    doc.moveTo(0, 5).lineTo(0, 10).stroke(); // Line out
 
-    // Vertical line (Circuit)
-    doc.moveTo(0, -10).lineTo(0, 10).stroke();
+    // "X" for Automatic
+    doc.moveTo(2, -2).lineTo(6, 2).stroke();
+    doc.moveTo(6, -2).lineTo(2, 2).stroke();
 
-    // Switch (Diagonal open) - UNE style: Line with a detached diagonal
-    doc.moveTo(0, -5).lineTo(8, -12).stroke(); // The arm
+    // Square (Thermal/Magnetic)
+    doc.rect(2, -6, 6, 6).stroke();
 
-    // "X" or ">" on the line usually denotes the breaker function
-    // UNE 60617-7: Magnetothermal is often a switch + box or specific curve
-    // Simplified Professional representation:
-    // Box logic or Standard Symbol:
-    // Switch: / 
-    // Thermal: |> (half triangle)
-    // Magnetic: \ (half cross)
-
-    // Let's use a clear, standard symbol:
-    // Contact
-    doc.moveTo(-2, -5).lineTo(0, -5).stroke(); // Terminal
-
-    // Protection (Square container or symbol on line)
-    // We will draw the symbol "on top" of the line for clarity
-
-    // Thermal (Semi-circle or Rectangle)
-    doc.rect(-4, 0, 8, 8).stroke();
-    // Magnetic (Semi-circle)
-    doc.path('M -4 4 Q 0 0 4 4').stroke();
-
-    doc.restore();
-
-    // Labels: Always to the RIGHT of the component to avoid overlapping the line
-    doc.font('Helvetica').fontSize(6).fillColor('black');
-    if (label) {
-        doc.text(label, x + 10, y - 8);
+    // Poles ticks
+    if (poles > 1) {
+        doc.moveTo(-2, -2).lineTo(2, 2).stroke(); // simplistic multipole indication
     }
-    doc.text(`${amperage}A`, x + 10, y + 2);
-    if (poles > 0) doc.text(`${poles}P`, x + 10, y + 8);
-}
-
-// Diferencial: Oval/Toroid with switch
-function drawDiferencial(doc: PDFKit.PDFDocument, x: number, y: number, label: string, amperage: number, sensitivity: number, poles: number) {
-    doc.save();
-    doc.translate(x, y);
-
-    // Vertical Line
-    doc.moveTo(0, -10).lineTo(0, 10).stroke();
-
-    // Switch arm
-    doc.moveTo(0, -5).lineTo(8, -12).stroke();
-
-    // Toroid (Oval) - The distinct feature of ID
-    doc.ellipse(0, 5, 6, 3).stroke();
-
-    // Link to switch (Dashed line typically, simplified here)
-    doc.dash(1, { space: 1 });
-    doc.moveTo(6, 5).lineTo(6, -8).stroke();
-    doc.undash();
 
     doc.restore();
 
-    // Labels
+    // Text details
     doc.font('Helvetica').fontSize(6).fillColor('black');
-    if (label) doc.text(label, x + 12, y - 10);
-    doc.text(`ID ${amperage}A`, x + 12, y);
-    doc.text(`${sensitivity}mA`, x + 12, y + 7);
-}
+    if (label) doc.text(label, x + 5, y - 5);
+    doc.text(`${amperage}A`, x + 5, y + 2);
+};
 
-// Sobretensiones (Surge): Two rectangles/varistors connected to ground
-function drawSobretensiones(doc: PDFKit.PDFDocument, x: number, y: number) {
+// Differential: Oval shape
+const drawDiferencial = (doc: PDFKit.PDFDocument, x: number, y: number, label: string, amperage: number, sensitivity: number, poles: number) => {
     doc.save();
     doc.translate(x, y);
 
-    // Line from Phase
-    doc.moveTo(0, -10).lineTo(0, -5).stroke();
-    // Box (Varistor)
-    doc.rect(-5, -5, 10, 10).stroke();
-    // Diagonal in box (Varistor symbol)
-    doc.moveTo(-5, -5).lineTo(5, 5).stroke();
+    // Line in
+    doc.moveTo(0, -10).lineTo(0, 0).strokeColor('black').stroke();
+    // Line out
+    doc.moveTo(0, 5).lineTo(0, 15).stroke();
 
-    // Ground text
-    doc.moveTo(0, 5).lineTo(0, 10).stroke();
-    // Ground symbol lines
-    doc.moveTo(-4, 10).lineTo(4, 10).stroke();
-    doc.moveTo(-2, 12).lineTo(2, 12).stroke();
-    doc.moveTo(-1, 14).lineTo(1, 14).stroke();
+    // Switch blade
+    doc.moveTo(0, 0).lineTo(8, 8).stroke();
+
+    // Toroid (Oval)
+    doc.ellipse(0, 6, 8, 4).stroke();
 
     doc.restore();
 
-    doc.font('Helvetica').fontSize(6).text('PMS', x + 8, y - 3);
-}
+    // Text
+    doc.font('Helvetica').fontSize(6).fillColor('black');
+    if (label) doc.text(label, x + 10, y - 5);
+    doc.text(`ID ${amperage}A`, x + 10, y + 2);
+    doc.text(`${sensitivity}mA`, x + 10, y + 8);
+};
 
+const drawSurgeProtection = (doc: PDFKit.PDFDocument, x: number, y: number) => {
+    doc.save();
+    doc.translate(x, y);
+    // Line from bus
+    doc.moveTo(0, -10).lineTo(0, 0).strokeColor('black').stroke();
+    // Box
+    doc.rect(-6, 0, 12, 12).stroke();
+    // Varistor symbol
+    doc.moveTo(-6, 0).lineTo(6, 12).stroke();
+    // Ground
+    doc.moveTo(0, 12).lineTo(0, 18).stroke();
+    doc.moveTo(-4, 18).lineTo(4, 18).stroke();
+    doc.moveTo(-2, 20).lineTo(2, 20).stroke();
+    doc.restore();
+    drawSymbolText(doc, 'Sobretens.', x, y + 22);
+};
 
-// --- MAIN GENERATION FUNCTION ---
+// --- NEW HORIZONTAL BUS ENGINE ---
 
 export const generateSchematicPDF = async (data: any, outputPath: string) => {
     return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({ margin: 20, size: 'A4' }); // Small margin to maximize space
+        const doc = new PDFDocument({ margin: 20, size: 'A3', layout: 'landscape' }); // A3 Landscape for more width
         const stream = fs.createWriteStream(outputPath);
 
         doc.pipe(stream);
 
-        // Constants
-        const PAGE_WIDTH = 595.28;
-        const PAGE_HEIGHT = 841.89;
+        // Layout Constants
         const MARGIN = 40;
+        const PAGE_WIDTH = 1190.55; // A3 Landscape
+        const PAGE_HEIGHT = 841.89;
         const CONTENT_WIDTH = PAGE_WIDTH - (MARGIN * 2);
+        const HEADER_Y = 100; // IGA and Header line Y position
+        const BUS_Y = 200;    // Main Horizontal Bus Y position
+        const DIFF_Y = 250;   // Differentials Y position
+        const CIRC_START_Y = 350; // Circuits start Y position
 
-        // Cajetín Area (Bottom Right)
-        const CAJETIN_HEIGHT = 90;
-        const CAJETIN_WIDTH = 240;
-        const CAJETIN_X = PAGE_WIDTH - MARGIN - CAJETIN_WIDTH;
-        const CAJETIN_Y = PAGE_HEIGHT - MARGIN - CAJETIN_HEIGHT;
+        const DIFF_SPACING = 120; // Width reserved per differential column
 
-        // Content Boundaries
-        const MAX_Y = CAJETIN_Y - 30; // Leave buffer above cajetin
-        const START_Y = 60;
-        const START_X = MARGIN + 20;
-
-        let currentY = START_Y;
         let currentPage = 1;
+        let diffIndex = 0; // Global index of differentials processed
 
-        // --- HELPER: FRAME & TITLE BLOCK ---
-        const drawFrameAndTitle = () => {
-            // Main Border
+        // --- FRAME & TITLE BLOCK ---
+        const drawFrame = () => {
             doc.lineWidth(1).strokeColor('black');
             doc.rect(MARGIN, MARGIN, CONTENT_WIDTH, PAGE_HEIGHT - (MARGIN * 2)).stroke();
 
-            // Title Block (Cajetín)
-            doc.rect(CAJETIN_X, CAJETIN_Y, CAJETIN_WIDTH, CAJETIN_HEIGHT).fillAndStroke('white', 'black');
+            // Title Block (Bottom Right)
+            const boxW = 300, boxH = 100;
+            const boxX = PAGE_WIDTH - MARGIN - boxW;
+            const boxY = PAGE_HEIGHT - MARGIN - boxH;
+            doc.rect(boxX, boxY, boxW, boxH).stroke();
 
-            // Cajetín Content
-            const padding = 5;
-            let textY = CAJETIN_Y + padding;
-
-            doc.fillColor('black').font('Helvetica-Bold').fontSize(7);
-            doc.text('EMPRESA INSTALADORA:', CAJETIN_X + padding, textY);
-            doc.font('Helvetica').fontSize(9).text('INSTALACIONES Y SUMINISTROS ELÉCTRICOS SAN VICENTE', CAJETIN_X + padding, textY + 10);
-
-            textY += 30;
-            doc.font('Helvetica-Bold').fontSize(7).text('TITULAR:', CAJETIN_X + padding, textY);
-            doc.font('Helvetica').fontSize(8).text(data.clientName || '', CAJETIN_X + 45, textY);
-
-            textY += 15;
-            doc.font('Helvetica-Bold').fontSize(7).text('EMPLAZAMIENTO:', CAJETIN_X + padding, textY);
-            doc.font('Helvetica').fontSize(7).text(data.address || '', CAJETIN_X + padding, textY + 10, { width: CAJETIN_WIDTH - 10, height: 20, ellipsis: true });
-
-            textY += 28;
-            doc.font('Helvetica-Bold').fontSize(7).text('ESQUEMA UNIFILAR', CAJETIN_X + padding, textY);
-            doc.text(`Pag. ${currentPage}`, CAJETIN_X + CAJETIN_WIDTH - 40, textY);
+            doc.font('Helvetica-Bold').fontSize(10).text('ESQUEMA UNIFILAR (S.T. Horizontal)', boxX + 10, boxY + 10);
+            doc.font('Helvetica').fontSize(8).text(`TITULAR: ${data.clientName || ''}`, boxX + 10, boxY + 30);
+            doc.text(`DIRECCIÓN: ${data.address || ''}`, boxX + 10, boxY + 45);
+            doc.text(`Hoja ${currentPage}`, boxX + 250, boxY + 80);
         };
-
-        // Initialize First Page
-        drawFrameAndTitle();
-        doc.font('Helvetica-Bold').fontSize(14).text('ESQUEMA UNIFILAR', 0, MARGIN + 10, { align: 'center', width: PAGE_WIDTH });
 
         // --- DRAWING LOGIC ---
 
-        if (!data.cuadros || data.cuadros.length === 0) {
-            doc.text('No hay datos de cuadros eléctricos.', START_X, START_Y);
-            doc.end();
-            return;
+        // Flatten all differentials from all cuadros (assuming single main cuadro for unifilar logic usually)
+        // If multiple cuadros, we might need a super-bus or separate sheets. 
+        // For this implementation, we take the first cuadro's components as the "General Panel".
+        const mainCuadro = data.cuadros && data.cuadros[0] ? data.cuadros[0] : null;
+        const differentials = mainCuadro ? (mainCuadro.differentials || []) : [];
+        const mainBreaker = mainCuadro ? mainCuadro.mainBreaker : null;
+
+        const drawPage = () => {
+            drawFrame();
+
+            // 1. Origin & IGA (Only on Page 1)
+            let currentX = MARGIN + 50;
+
+            if (currentPage === 1) {
+                // Feed Line
+                doc.lineWidth(2).strokeColor('black');
+                doc.moveTo(MARGIN, HEADER_Y).lineTo(currentX, HEADER_Y).stroke();
+
+                // IGA
+                drawMagnetotermico(doc, currentX, HEADER_Y, 'IGA', mainBreaker?.amperage || 0, mainBreaker?.poles || 2);
+
+                // Surge Protection (optional, draw next to IGA)
+                drawSurgeProtection(doc, currentX + 40, HEADER_Y);
+
+                // Line down to Bus
+                doc.moveTo(currentX, HEADER_Y + 10).lineTo(currentX, BUS_Y).stroke();
+
+                currentX += 80; // Advance X for first differential
+            } else {
+                // Continuity Arrow Incoming
+                doc.lineWidth(2).strokeColor('black');
+                // Arrow Head
+                doc.moveTo(MARGIN + 10, BUS_Y - 5).lineTo(MARGIN + 20, BUS_Y).lineTo(MARGIN + 10, BUS_Y + 5).stroke();
+                // Line
+                doc.moveTo(MARGIN + 20, BUS_Y).lineTo(currentX, BUS_Y).stroke();
+
+                // Continuity Label
+                doc.font('Helvetica-Bold').fontSize(10).text(`${currentPage - 1}`, MARGIN + 5, BUS_Y - 15);
+            }
+
+            // 2. Draw Horizontal Bus & Differentials
+            const startBusX = currentPage === 1 ? (MARGIN + 50) : (MARGIN + 20); // Connect back to IGA drop or Arrow
+
+            // Loop through differentials until space runs out
+            const maxPageX = PAGE_WIDTH - MARGIN - 50; // Leave space for outgoing arrow
+
+            // Start iterating from where we left off
+            let firstDiffOnPage = true;
+
+            // Draw Main Bus Segment for this page (we'll extend it as we go)
+            doc.lineWidth(3).strokeColor('black'); // Thicker bus
+            const busStartX = startBusX;
+            let busEndX = busStartX;
+
+            while (diffIndex < differentials.length) {
+                if (currentX + DIFF_SPACING > maxPageX) {
+                    // Page Full -> Draw Outgoing Arrow and Break
+                    doc.lineWidth(2).strokeColor('black');
+                    doc.moveTo(busEndX, BUS_Y).lineTo(maxPageX, BUS_Y).stroke(); // Extend bus to edge
+                    // Arrow
+                    doc.moveTo(maxPageX, BUS_Y).lineTo(maxPageX + 10, BUS_Y - 5).stroke();
+                    doc.moveTo(maxPageX, BUS_Y).lineTo(maxPageX + 10, BUS_Y + 5).stroke();
+                    doc.moveTo(maxPageX, BUS_Y).lineTo(maxPageX + 10, BUS_Y).lineTo(maxPageX + 10, BUS_Y).stroke(); // just end line
+
+                    doc.font('Helvetica-Bold').fontSize(10).text(`${currentPage}`, maxPageX + 5, BUS_Y - 15);
+
+                    doc.addPage({ margin: 20, size: 'A3', layout: 'landscape' });
+                    currentPage++;
+                    drawPage(); // Recurse for next page
+                    return; // Exit this function frame
+                }
+
+                // Draw Differential
+                const diff = differentials[diffIndex];
+
+                // Bus connection point
+
+                // Draw drop line from Bus to Diff
+                doc.lineWidth(1).strokeColor('black');
+                doc.moveTo(currentX, BUS_Y).lineTo(currentX, DIFF_Y).stroke();
+
+                // Differential Symbol
+                drawDiferencial(doc, currentX, DIFF_Y, diff.name || `ID${diffIndex + 1}`, diff.amperage, diff.sensitivity, diff.poles);
+
+                // Updated Bus End
+                busEndX = currentX;
+
+                // 3. Circuits (Vertical/Tree below Diff)
+                const circuits = diff.circuits || [];
+                let circY = CIRC_START_Y;
+
+                circuits.forEach((circ: any, cIdx: number) => {
+                    // Vertical line from Diff to Circuits
+                    if (cIdx === 0) {
+                        doc.moveTo(currentX, DIFF_Y + 15).lineTo(currentX, circY).stroke();
+                    } else {
+                        // Branching logic? Or just vertical stack?
+                        // User image shows tree-like structure or vertical drops.
+                        // Let's do a vertical drop with horizontal branches
+                        doc.moveTo(currentX, circY - 30).lineTo(currentX, circY).stroke();
+                    }
+
+                    // Magnetothermic Symbol
+                    drawMagnetotermico(doc, currentX, circY, circ.name || `C${cIdx + 1}`, circ.amperage, circ.poles);
+
+                    // Circuit Text (Right side)
+                    doc.font('Helvetica').fontSize(7).text(`${circ.description || ''} (${circ.section || '?'}mm²)`, currentX + 15, circY + 15, { width: 80 });
+
+                    circY += 60; // Spacing for next circuit
+                });
+
+                currentX += DIFF_SPACING;
+                diffIndex++;
+            }
+
+            // Finish Bus line for final page
+            doc.lineWidth(3).strokeColor('black').moveTo(startBusX, BUS_Y).lineTo(busEndX + 20, BUS_Y).stroke();
+        };
+
+        // Start Drawing
+        if (!mainCuadro) {
+            drawFrame();
+            doc.text("No hay cuadros definidos.", 100, 100);
+        } else {
+            drawPage();
         }
 
-        // We assume "Cuadros" are sequential in the supply line for ease, or just list them.
-        // For a proper unifilar, they usually follow a hierarchy. Here we list them vertically.
-
-        data.cuadros.forEach((cuadro: any, cIdx: number) => {
-
-            // Check Space for Cuadro Header + IGA
-            if (currentY + 150 > MAX_Y) {
-                // Continuation Arrow Bottom
-                doc.font('Helvetica-Bold').fontSize(10).text(`Continúa en pág. ${currentPage + 1} ->`, START_X + 100, MAX_Y + 10);
-
-                doc.addPage();
-                currentPage++;
-                drawFrameAndTitle();
-                currentY = START_Y;
-
-                // Continuation Arrow Top
-                doc.font('Helvetica-Bold').fontSize(10).text(`<- Viene de pág. ${currentPage - 1}`, START_X + 100, MARGIN + 15);
-                currentY += 20;
-            }
-
-            // Draw Cuadro Header
-            doc.rect(START_X - 10, currentY, CONTENT_WIDTH - 20, 25).fillAndStroke('#f0f9ff', '#0ea5e9'); // Light blue header
-            doc.fillColor('black').font('Helvetica-Bold').fontSize(11).text(`Cuadro: ${cuadro.name}`, START_X, currentY + 8);
-            currentY += 50;
-
-            // Draw IGA & Surge
-            const HEADER_LINE_Y = currentY;
-            const IGA_X = START_X + 20;
-            const SURGE_X = START_X + 80;
-
-            // Horizontal bus line
-            doc.lineWidth(1.5).moveTo(START_X, HEADER_LINE_Y).lineTo(START_X + 150, HEADER_LINE_Y).stroke();
-
-            // IGA
-            if (cuadro.mainBreaker) {
-                drawMagnetotermico(doc, IGA_X, HEADER_LINE_Y, 'IGA', cuadro.mainBreaker.amperage, cuadro.mainBreaker.poles);
-            }
-            // Surge (Sobretensiones)
-            drawSobretensiones(doc, SURGE_X, HEADER_LINE_Y);
-
-            // Move down to Differentials
-            currentY += 40;
-
-            // Vertical drop to Diff Bus
-            const DIFF_BUS_X = START_X + 40; // Indented
-            doc.lineWidth(1).moveTo(IGA_X, HEADER_LINE_Y + 10).lineTo(DIFF_BUS_X, currentY).stroke();
-
-            if (cuadro.differentials && cuadro.differentials.length > 0) {
-                cuadro.differentials.forEach((diff: any) => {
-
-                    // Logic to check space. A differential takes space + its circuits space.
-                    // Approx: Diff header (40) + Circuits (N * 30)
-                    const requiredSpace = 60 + (diff.circuits?.length || 0) * 35;
-
-                    if (currentY + requiredSpace > MAX_Y) {
-                        // Continuation Arrow Bottom
-                        doc.fillColor('black').font('Helvetica-Bold').text(`Continúa en pág. ${currentPage + 1} (Circuitos del ${cuadro.name}) ...`, START_X + 100, MAX_Y + 5);
-
-                        doc.addPage();
-                        currentPage++;
-                        drawFrameAndTitle();
-                        currentY = START_Y;
-
-                        // Continuation Arrow Top
-                        doc.text(`... Viene de pág. ${currentPage - 1} (Cuadro ${cuadro.name})`, START_X + 100, MARGIN + 15);
-                        currentY += 30;
-                    }
-
-                    // Draw Differential
-                    const diffY = currentY;
-                    // Bus line down
-                    doc.moveTo(DIFF_BUS_X, diffY - 20).lineTo(DIFF_BUS_X, diffY).stroke();
-                    // Horizontal to ID
-                    doc.moveTo(DIFF_BUS_X, diffY).lineTo(DIFF_BUS_X + 20, diffY).stroke();
-
-                    drawDiferencial(doc, DIFF_BUS_X + 30, diffY, diff.description, diff.amperage, diff.sensitivity, diff.poles);
-
-                    // Circuits Bus
-                    const CIRC_BUS_X = DIFF_BUS_X + 80;
-                    doc.moveTo(DIFF_BUS_X + 40, diffY).lineTo(CIRC_BUS_X, diffY).stroke(); // Line from ID to Circ Bus
-
-                    let circuitY = diffY;
-
-                    if (diff.circuits && diff.circuits.length > 0) {
-                        // Drawing Circuits vertical list
-                        diff.circuits.forEach((circ: any, idx: number) => {
-                            circuitY = diffY + (idx * 35);
-
-                            // Check mid-circuit overflow (unlikely but possible if strict)
-                            if (circuitY > MAX_Y - 20) {
-                                // Simple page break for circuits
-                                doc.addPage();
-                                currentPage++;
-                                drawFrameAndTitle();
-                                currentY = START_Y;
-                                circuitY = START_Y;
-                                // Re-draw bus line context if needed, strictly speaking we connect visually
-                            }
-
-                            // Vertical bus continuation
-                            if (idx > 0) {
-                                doc.moveTo(CIRC_BUS_X, diffY).lineTo(CIRC_BUS_X, circuitY).stroke();
-                            }
-
-                            // Horizontal to Breaker
-                            doc.moveTo(CIRC_BUS_X, circuitY).lineTo(CIRC_BUS_X + 20, circuitY).stroke();
-
-                            drawMagnetotermico(doc, CIRC_BUS_X + 30, circuitY, circ.name || `C${idx + 1}`, circ.amperage, circ.poles);
-
-                            // Line out
-                            doc.moveTo(CIRC_BUS_X + 40, circuitY).lineTo(CIRC_BUS_X + 60, circuitY).stroke();
-
-                            // Description Text
-                            doc.font('Helvetica').fontSize(7).fillColor('#333');
-                            doc.text(circ.description || 'Uso Gral.', CIRC_BUS_X + 65, circuitY - 3);
-                            doc.fillColor('#666').fontSize(6);
-                            if (circ.section) doc.text(`${circ.section}mm²`, CIRC_BUS_X + 65, circuitY + 6);
-                        });
-
-                        // Update Y for next differential
-                        currentY = circuitY + 50;
-                    } else {
-                        currentY += 50;
-                    }
-                });
-            } else {
-                currentY += 40;
-            }
-
-            // Space between cuadros
-            currentY += 20;
-
-        }); // End Cuadros Loop
-
-
-        // Finalize
         doc.end();
         stream.on('finish', () => resolve(outputPath));
-        stream.on('error', (err) => reject(err));
+        stream.on('error', reject);
     });
 };
+
 
 export const generateAuthorizationPDF = async (data: any, outputPath: string) => {
     // ... (Keep existing generateAuthorizationPDF logic exactly as is or verified)

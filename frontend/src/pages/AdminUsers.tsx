@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { getUsers, createUser, updateUser, deleteUser, exportData, importData } from '../api';
+import { useEffect, useState } from 'react';
+import { getUsers, createUser, updateUser, deleteUser } from '../api';
 
 
 interface ExpedienteSummary {
@@ -102,88 +102,11 @@ export default function AdminUsers() {
     };
 
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // Handlers for export/import
-
-    const handleExport = async () => {
-        try {
-            const data = await exportData();
-            const jsonString = JSON.stringify(data, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `backup_gravity_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (err) {
-            console.error('Export failed', err);
-            alert('Error al exportar datos');
-        }
-    };
-
-    const handleImportClick = () => {
-        if (fileInputRef.current) fileInputRef.current.click();
-    };
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        if (!confirm('⚠️ IMPORTANTE: Esta acción combinará los datos del archivo con los existentes. ¿Deseas continuar?')) {
-            e.target.value = '';
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-            try {
-                const json = JSON.parse(event.target?.result as string);
-                setLoading(true);
-                await importData(json);
-                alert('✅ Datos importados correctamente.');
-                fetchUsers(); // Refresh data
-            } catch (err: any) {
-                console.error('Import failed', err);
-                alert('Error al importar: ' + (err.message || 'Archivo inválido'));
-            } finally {
-                setLoading(false);
-                if (fileInputRef.current) fileInputRef.current.value = '';
-            }
-        };
-        reader.readAsText(file);
-    };
-
     return (
         <div className="px-4 sm:px-0">
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <h1 className="text-2xl font-semibold text-slate-100">Gestión de Usuarios</h1>
                 <div className="flex gap-2">
-                    <button
-                        onClick={handleExport}
-                        className="bg-emerald-600/20 text-emerald-400 border border-emerald-600/50 px-3 py-2 rounded hover:bg-emerald-600/30 text-sm font-medium flex items-center gap-2"
-                        title="Descargar copia de seguridad"
-                    >
-                        <span>⬇ Backup</span>
-                    </button>
-                    <button
-                        onClick={handleImportClick}
-                        className="bg-orange-600/20 text-orange-400 border border-orange-600/50 px-3 py-2 rounded hover:bg-orange-600/30 text-sm font-medium flex items-center gap-2"
-                        title="Restaurar copia de seguridad"
-                    >
-                        <span>⬆ Restaurar</span>
-                    </button>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        accept=".json"
-                        className="hidden"
-                    />
-                    <div className="w-px h-8 bg-slate-700 mx-1"></div>
                     <button
                         onClick={() => { resetForm(); setIsModalOpen(true); }}
                         className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium"
