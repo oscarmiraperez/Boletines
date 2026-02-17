@@ -44,3 +44,12 @@ export const updateUser = (id: string, data: any) => apiRequest(`/users/${id}`, 
 export const deleteUser = (id: string) => apiRequest(`/users/${id}`, {
     method: 'DELETE'
 });
+
+export const exportData = () => apiRequest('/admin/export', {
+    method: 'GET'
+});
+
+export const importData = (data: any) => apiRequest('/admin/import', {
+    method: 'POST',
+    body: JSON.stringify(data)
+});

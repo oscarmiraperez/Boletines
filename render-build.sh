@@ -14,7 +14,8 @@ echo "--- 3. Installing Backend Dependencies ---"
 cd backend
 npm install
 
-echo "--- 4. Generating Prisma Client ---"
+echo "--- 4. Generating Prisma Client (Postgres) ---"
+cp prisma/schema.postgres.prisma prisma/schema.prisma
 npx prisma generate
 
 echo "--- 5. Building Backend ---"

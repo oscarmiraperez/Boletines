@@ -50,6 +50,7 @@ import expedienteRoutes from './routes/expedienteRoutes';
 import technicalRoutes from './routes/technicalRoutes';
 import documentRoutes from './routes/documentRoutes';
 import esquemaRoutes from './routes/esquemaRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -57,6 +58,7 @@ app.use('/api/expedientes', expedienteRoutes);
 app.use('/api/technical', technicalRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/esquemas', esquemaRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Basic health check route
 app.get('/api/health', (req: Request, res: Response) => {
