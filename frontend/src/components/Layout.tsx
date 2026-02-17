@@ -50,14 +50,17 @@ export default function Layout() {
                                 <span className="sm:hidden">Usr</span>
                             </Link>
                         )}
-                        <button
-                            onClick={logout}
-                            className="text-xs font-medium text-slate-500 hover:text-red-400 transition-colors p-2 hover:bg-slate-800/50 rounded-md"
-                            title="Cerrar Sesión"
-                        >
-                            <span className="hidden sm:inline">Salir</span>
-                            <span className="sm:hidden">✕</span>
-                        </button>
+                        <div className="flex flex-col items-end">
+                            <button
+                                onClick={logout}
+                                className="text-xs font-medium text-slate-500 hover:text-red-400 transition-colors p-2 hover:bg-slate-800/50 rounded-md"
+                                title="Cerrar Sesión"
+                            >
+                                <span className="hidden sm:inline">Salir</span>
+                                <span className="sm:hidden">✕</span>
+                            </button>
+                            <span className="text-[10px] text-slate-600 font-mono hidden sm:inline-block pr-2">v2.7</span>
+                        </div>
                     </div>
                 </div>
             </header>
