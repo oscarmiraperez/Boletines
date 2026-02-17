@@ -218,50 +218,55 @@ const drawSurgeProtection = (doc: PDFKit.PDFDocument, x: number, y: number) => {
 
 // --- NEW HORIZONTAL BUS ENGINE ---
 
+// --- NEW HORIZONTAL BUS ENGINE (Tree Topology) ---
+
 export const generateSchematicPDF = async (data: any, outputPath: string) => {
     return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({ margin: 20, size: 'A3', layout: 'landscape' }); // A3 Landscape for more width
+        const doc = new PDFDocument({ margin: 20, size: 'A3', layout: 'landscape' }); // A3 Landscape
         const stream = fs.createWriteStream(outputPath);
 
         doc.pipe(stream);
 
         // Layout Constants
         const MARGIN = 40;
-        const PAGE_WIDTH = 1190.55; // A3 Landscape
+        const PAGE_WIDTH = 1190.55;
         const PAGE_HEIGHT = 841.89;
         const CONTENT_WIDTH = PAGE_WIDTH - (MARGIN * 2);
-        const HEADER_Y = 100; // IGA and Header line Y position
-        const BUS_Y = 200;    // Main Horizontal Bus Y position
-        const DIFF_Y = 250;   // Differentials Y position
-        const CIRC_START_Y = 350; // Circuits start Y position
 
-        const DIFF_SPACING = 120; // Width reserved per differential column
+        // Y Positions
+        const HEADER_Y = 150;      // Origin/IGA height
+        const MAIN_BUS_Y = 250;    // Main Horizontal Bus
+        const DIFF_Y = 300;        // Differentials
+        const SUB_BUS_Y = 400;     // Sub-buses for circuits (below Diffs)
+        const CIRC_Y = 450;        // Circuits (Breakers)
+        const CIRC_TEXT_Y = 520;   // Circuit Descriptions
+
+        // Spacing
+        const CIRCUIT_SPACING = 60; // Width of one circuit
+        const MIN_DIFF_SPACING = 100; // Minimum width for a Diff block (if 0 or 1 circuit)
 
         let currentPage = 1;
-        let diffIndex = 0; // Global index of differentials processed
+        let diffIndex = 0;
 
         // --- FRAME & TITLE BLOCK ---
         const drawFrame = () => {
             doc.lineWidth(1).strokeColor('black');
             doc.rect(MARGIN, MARGIN, CONTENT_WIDTH, PAGE_HEIGHT - (MARGIN * 2)).stroke();
 
-            // Title Block (Bottom Right)
-            const boxW = 300, boxH = 100;
+            // Title Block
+            const boxW = 350, boxH = 100;
             const boxX = PAGE_WIDTH - MARGIN - boxW;
             const boxY = PAGE_HEIGHT - MARGIN - boxH;
             doc.rect(boxX, boxY, boxW, boxH).stroke();
 
-            doc.font('Helvetica-Bold').fontSize(10).text('ESQUEMA UNIFILAR (S.T. Horizontal)', boxX + 10, boxY + 10);
-            doc.font('Helvetica').fontSize(8).text(`TITULAR: ${data.clientName || ''}`, boxX + 10, boxY + 30);
-            doc.text(`DIRECCIÓN: ${data.address || ''}`, boxX + 10, boxY + 45);
-            doc.text(`Hoja ${currentPage}`, boxX + 250, boxY + 80);
+            doc.font('Helvetica-Bold').fontSize(12).text('ESQUEMA UNIFILAR (Distribución Horizontal)', boxX + 15, boxY + 15);
+            doc.font('Helvetica').fontSize(9).text(`TITULAR: ${data.clientName || 'Sin Nombre'}`, boxX + 15, boxY + 40);
+            doc.text(`DIRECCIÓN: ${data.address || ''}`, boxX + 15, boxY + 55);
+            doc.font('Helvetica-Bold').fontSize(10).text(`HOJA ${currentPage}`, boxX + 280, boxY + 75);
         };
 
         // --- DRAWING LOGIC ---
 
-        // Flatten all differentials from all cuadros (assuming single main cuadro for unifilar logic usually)
-        // If multiple cuadros, we might need a super-bus or separate sheets. 
-        // For this implementation, we take the first cuadro's components as the "General Panel".
         const mainCuadro = data.cuadros && data.cuadros[0] ? data.cuadros[0] : null;
         const differentials = mainCuadro ? (mainCuadro.differentials || []) : [];
         const mainBreaker = mainCuadro ? mainCuadro.mainBreaker : null;
@@ -269,116 +274,130 @@ export const generateSchematicPDF = async (data: any, outputPath: string) => {
         const drawPage = () => {
             drawFrame();
 
-            // 1. Origin & IGA (Only on Page 1)
-            let currentX = MARGIN + 50;
+            // 1. Origin & IGA (Page 1) or Continuity In (Page > 1)
+            let currentX = MARGIN + 80; // Start X pointer
 
             if (currentPage === 1) {
+                // Draw IGA Structure
                 // Feed Line
                 doc.lineWidth(2).strokeColor('black');
-                doc.moveTo(MARGIN, HEADER_Y).lineTo(currentX, HEADER_Y).stroke();
+                doc.moveTo(MARGIN + 40, HEADER_Y).lineTo(currentX, HEADER_Y).stroke();
 
-                // IGA
+                // IGA Symbol
                 drawMagnetotermico(doc, currentX, HEADER_Y, 'IGA', mainBreaker?.amperage || 0, mainBreaker?.poles || 2);
 
-                // Surge Protection (optional, draw next to IGA)
+                // Surge Prot (Next to IGA)
                 drawSurgeProtection(doc, currentX + 40, HEADER_Y);
 
-                // Line down to Bus
-                doc.moveTo(currentX, HEADER_Y + 10).lineTo(currentX, BUS_Y).stroke();
+                // Line down to Main Bus
+                doc.lineWidth(2).moveTo(currentX, HEADER_Y + 15).lineTo(currentX, MAIN_BUS_Y).stroke();
 
-                currentX += 80; // Advance X for first differential
+                currentX += 60; // Move Cursor for first Diff
             } else {
-                // Continuity Arrow Incoming
-                doc.lineWidth(2).strokeColor('black');
-                // Arrow Head
-                doc.moveTo(MARGIN + 10, BUS_Y - 5).lineTo(MARGIN + 20, BUS_Y).lineTo(MARGIN + 10, BUS_Y + 5).stroke();
-                // Line
-                doc.moveTo(MARGIN + 20, BUS_Y).lineTo(currentX, BUS_Y).stroke();
+                // Continuation Arrow In
+                doc.lineWidth(3).strokeColor('black');
+                // Arrow
+                doc.moveTo(MARGIN + 20, MAIN_BUS_Y).lineTo(MARGIN + 50, MAIN_BUS_Y).stroke(); // Shaft
+                doc.moveTo(MARGIN + 50, MAIN_BUS_Y).lineTo(MARGIN + 40, MAIN_BUS_Y - 5).stroke(); // Tip
+                doc.moveTo(MARGIN + 50, MAIN_BUS_Y).lineTo(MARGIN + 40, MAIN_BUS_Y + 5).stroke();
 
-                // Continuity Label
-                doc.font('Helvetica-Bold').fontSize(10).text(`${currentPage - 1}`, MARGIN + 5, BUS_Y - 15);
+                doc.font('Helvetica-Bold').fontSize(12).text(`VIENE DE HOJA ${currentPage - 1}`, MARGIN + 20, MAIN_BUS_Y - 20, { width: 100, align: 'center' });
+
+                currentX = MARGIN + 80;
             }
 
-            // 2. Draw Horizontal Bus & Differentials
-            const startBusX = currentPage === 1 ? (MARGIN + 50) : (MARGIN + 20); // Connect back to IGA drop or Arrow
+            // 2. Main Bus & Differentials Loop
+            // The Main Bus connects all Diffs.
+            const startBusX = (currentPage === 1) ? (MARGIN + 80) : (MARGIN + 50);
+            let busEndX = startBusX;
 
-            // Loop through differentials until space runs out
-            const maxPageX = PAGE_WIDTH - MARGIN - 50; // Leave space for outgoing arrow
-
-            // Start iterating from where we left off
-            let firstDiffOnPage = true;
-
-            // Draw Main Bus Segment for this page (we'll extend it as we go)
-            doc.lineWidth(3).strokeColor('black'); // Thicker bus
-            const busStartX = startBusX;
-            let busEndX = busStartX;
+            doc.lineWidth(4).strokeColor('black'); // Heavy Main Bus
+            // We draw the bus segment by segment or one long line at end. Let's track X.
 
             while (diffIndex < differentials.length) {
-                if (currentX + DIFF_SPACING > maxPageX) {
-                    // Page Full -> Draw Outgoing Arrow and Break
-                    doc.lineWidth(2).strokeColor('black');
-                    doc.moveTo(busEndX, BUS_Y).lineTo(maxPageX, BUS_Y).stroke(); // Extend bus to edge
-                    // Arrow
-                    doc.moveTo(maxPageX, BUS_Y).lineTo(maxPageX + 10, BUS_Y - 5).stroke();
-                    doc.moveTo(maxPageX, BUS_Y).lineTo(maxPageX + 10, BUS_Y + 5).stroke();
-                    doc.moveTo(maxPageX, BUS_Y).lineTo(maxPageX + 10, BUS_Y).lineTo(maxPageX + 10, BUS_Y).stroke(); // just end line
+                const diff = differentials[diffIndex];
+                const circuits = diff.circuits || [];
+                const numCircs = Math.max(1, circuits.length); // At least takes space of 1
 
-                    doc.font('Helvetica-Bold').fontSize(10).text(`${currentPage}`, maxPageX + 5, BUS_Y - 15);
+                // Calculate Block Width for this Diff Group
+                const blockWidth = Math.max(MIN_DIFF_SPACING, numCircs * CIRCUIT_SPACING);
+
+                // Check Bounds
+                if (currentX + blockWidth > PAGE_WIDTH - MARGIN - 50) {
+                    // Overflow -> Page Break
+                    // Draw Outgoing Arrow
+                    doc.lineWidth(3).strokeColor('black');
+                    doc.moveTo(busEndX, MAIN_BUS_Y).lineTo(PAGE_WIDTH - MARGIN, MAIN_BUS_Y).stroke();
+                    // Arrow Tip
+                    doc.moveTo(PAGE_WIDTH - MARGIN, MAIN_BUS_Y).lineTo(PAGE_WIDTH - MARGIN - 10, MAIN_BUS_Y - 5).stroke();
+                    doc.moveTo(PAGE_WIDTH - MARGIN, MAIN_BUS_Y).lineTo(PAGE_WIDTH - MARGIN - 10, MAIN_BUS_Y + 5).stroke();
+
+                    doc.font('Helvetica-Bold').fontSize(10).text(`CONTINÚA EN HOJA ${currentPage + 1}`, PAGE_WIDTH - MARGIN - 150, MAIN_BUS_Y - 20);
 
                     doc.addPage({ margin: 20, size: 'A3', layout: 'landscape' });
                     currentPage++;
-                    drawPage(); // Recurse for next page
-                    return; // Exit this function frame
+                    drawPage();
+                    return;
                 }
 
-                // Draw Differential
-                const diff = differentials[diffIndex];
+                // Draw Differential Block
+                const midBlockX = currentX + (blockWidth / 2);
 
-                // Bus connection point
-
-                // Draw drop line from Bus to Diff
+                // 1. Connection from Main Bus to Diff
                 doc.lineWidth(1).strokeColor('black');
-                doc.moveTo(currentX, BUS_Y).lineTo(currentX, DIFF_Y).stroke();
+                doc.moveTo(midBlockX, MAIN_BUS_Y).lineTo(midBlockX, DIFF_Y).stroke();
 
-                // Differential Symbol
-                drawDiferencial(doc, currentX, DIFF_Y, diff.name || `ID${diffIndex + 1}`, diff.amperage, diff.sensitivity, diff.poles);
+                // 2. Differential Symbol
+                drawDiferencial(doc, midBlockX, DIFF_Y, diff.name || `ID${diffIndex + 1}`, diff.amperage, diff.sensitivity, diff.poles);
 
-                // Updated Bus End
-                busEndX = currentX;
+                // 3. Line down to Sub-Bus
+                doc.moveTo(midBlockX, DIFF_Y + 15).lineTo(midBlockX, SUB_BUS_Y).stroke();
 
-                // 3. Circuits (Vertical/Tree below Diff)
-                const circuits = diff.circuits || [];
-                let circY = CIRC_START_Y;
+                // 4. Sub-Bus (Horizontal)
+                // Width of sub-bus = spanning from first circuit center to last circuit center
+                if (circuits.length > 0) {
+                    const firstCircX = currentX + (CIRCUIT_SPACING / 2);
+                    const lastCircX = currentX + ((circuits.length - 1) * CIRCUIT_SPACING) + (CIRCUIT_SPACING / 2);
 
-                circuits.forEach((circ: any, cIdx: number) => {
-                    // Vertical line from Diff to Circuits
-                    if (cIdx === 0) {
-                        doc.moveTo(currentX, DIFF_Y + 15).lineTo(currentX, circY).stroke();
-                    } else {
-                        // Branching logic? Or just vertical stack?
-                        // User image shows tree-like structure or vertical drops.
-                        // Let's do a vertical drop with horizontal branches
-                        doc.moveTo(currentX, circY - 30).lineTo(currentX, circY).stroke();
-                    }
+                    doc.lineWidth(2).strokeColor('black');
+                    doc.moveTo(firstCircX, SUB_BUS_Y).lineTo(lastCircX, SUB_BUS_Y).stroke();
 
-                    // Magnetothermic Symbol
-                    drawMagnetotermico(doc, currentX, circY, circ.name || `C${cIdx + 1}`, circ.amperage, circ.poles);
+                    // 5. Circuits (Magnetothermals)
+                    circuits.forEach((circ: any, cIdx: number) => {
+                        const circX = currentX + (cIdx * CIRCUIT_SPACING) + (CIRCUIT_SPACING / 2);
 
-                    // Circuit Text (Right side)
-                    doc.font('Helvetica').fontSize(7).text(`${circ.description || ''} (${circ.section || '?'}mm²)`, currentX + 15, circY + 15, { width: 80 });
+                        // Drop from Sub-Bus
+                        doc.lineWidth(1).strokeColor('black');
+                        doc.moveTo(circX, SUB_BUS_Y).lineTo(circX, CIRC_Y).stroke();
 
-                    circY += 60; // Spacing for next circuit
-                });
+                        // Breaker Symbol
+                        drawMagnetotermico(doc, circX, CIRC_Y, circ.name || `C${cIdx + 1}`, circ.amperage, circ.poles);
 
-                currentX += DIFF_SPACING;
+                        // Line Out
+                        doc.moveTo(circX, CIRC_Y + 15).lineTo(circX, CIRC_TEXT_Y - 5).stroke();
+
+                        // Text Info
+                        doc.font('Helvetica').fontSize(7);
+                        doc.text(circ.description || 'Circuito', circX - 25, CIRC_TEXT_Y, { width: 50, align: 'center' });
+                        doc.text(`${circ.section || '?'}mm²`, circX - 25, CIRC_TEXT_Y + 30, { width: 50, align: 'center' });
+                    });
+                } else {
+                    // No circuits, just a stub?
+                    doc.font('Helvetica-Oblique').fontSize(8).text("(Reserva)", midBlockX - 20, SUB_BUS_Y + 20);
+                }
+
+                // Advance X
+                busEndX = currentX + blockWidth;
+                currentX += blockWidth;
                 diffIndex++;
             }
 
-            // Finish Bus line for final page
-            doc.lineWidth(3).strokeColor('black').moveTo(startBusX, BUS_Y).lineTo(busEndX + 20, BUS_Y).stroke();
+            // Finish Main Bus for this page (if not overflowed)
+            doc.lineWidth(4).strokeColor('black');
+            doc.moveTo(startBusX, MAIN_BUS_Y).lineTo(busEndX, MAIN_BUS_Y).stroke();
         };
 
-        // Start Drawing
+        // Execution
         if (!mainCuadro) {
             drawFrame();
             doc.text("No hay cuadros definidos.", 100, 100);
