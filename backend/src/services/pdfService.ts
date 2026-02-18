@@ -19,25 +19,16 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
 
         // Helper to safely set fields
         const safeSet = (fieldName: string, value: string | number | boolean | undefined | null) => {
-            if (value === undefined || value === null) return;
+            if (value === undefined || value === null || value === '') return;
             try {
                 const field = form.getField(fieldName);
                 if (field) {
-                    // Handle Checkboxes (if value is 'X', boolean true, or 'x')
-                    if (field.constructor.name === 'PDFCheckBox') {
-                        if (value === true || value === 'X' || value === 'x') {
+                    if (field.constructor.name === 'PDFCheckBox' || field instanceof form.getCheckBox(fieldName).constructor) {
+                        if (value === true || value === 'X' || value === 'x' || String(value).toLowerCase() === 'true') {
                             form.getCheckBox(fieldName).check();
                         }
-                    } else if (field.constructor.name === 'PDFTextField') {
-                        // Handle Text Fields
+                    } else if (field.constructor.name === 'PDFTextField' || field instanceof form.getTextField(fieldName).constructor) {
                         form.getTextField(fieldName).setText(String(value));
-                    } else if (field.constructor.name === 'PDFDropdown') {
-                        // Handle Dropdowns (best effort select or text)
-                        try {
-                            form.getDropdown(fieldName).select(String(value));
-                        } catch {
-                            // If option doesn't exist, try setting as text if allowed, or ignore
-                        }
                     }
                 }
             } catch (err) {
@@ -45,55 +36,48 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
             }
         };
 
+        const mtd = data.mtdData || {};
+
         // --- 1. TITULAR ---
-        safeSet('titular_nombre', data.titularNombre);
-        safeSet('titular_nif', data.titularNif);
-        safeSet('titular_direccion', data.titularDireccion); // Assuming existing in data
-        // safeSet('titular_cp', ...); 
-        // safeSet('titular_municipio', ...);
+        safeSet('titular_nombre', mtd.titularNombre || data.clientName);
+        safeSet('titular_nif', mtd.titularNif || data.clientNif);
+        safeSet('titular_direccion', mtd.titularDireccion || data.address);
 
         // --- 2. EMPLAZAMIENTO ---
-        safeSet('emplazamiento_direccion', data.direccion);
-        safeSet('emplazamiento_municipio', data.municipio);
-        safeSet('emplazamiento_cp', data.cp);
-        safeSet('emplazamiento_provincia', 'ALICANTE'); // Default or from data
-        safeSet('emplazamiento_ref_catastral', data.refCatastral);
+        safeSet('emplazamiento_direccion', mtd.direccion || data.address);
+        safeSet('emplazamiento_municipio', data.municipality);
+        safeSet('emplazamiento_cp', data.postalCode);
+        safeSet('emplazamiento_provincia', 'ALICANTE'); // Default
+        safeSet('emplazamiento_ref_catastral', mtd.refCatastral);
 
         // --- 3. USO ---
-        // Example logic for checkboxes based on 'uso' field
-        if (data.uso === 'VIVIENDA') safeSet('uso_vivienda', true);
-        else if (data.uso === 'LOCAL') safeSet('uso_local', true);
-        else if (data.uso === 'INDUSTRIAl') safeSet('uso_industrial', true);
+        const uso = String(mtd.usoInstalacion || 'vivienda').toLowerCase();
+        if (uso.includes('vivienda')) safeSet('uso_vivienda', true);
+        else if (uso.includes('local')) safeSet('uso_local', true);
+        else if (uso.includes('industri')) safeSet('uso_industrial', true);
 
-        safeSet('superficie', data.superficie);
-        safeSet('potencia_prevista', data.potenciaContracted); // or potenciaAdmisible
-        safeSet('tension', data.tensionNominal); // e.g. "230" or "400"
+        safeSet('superficie', mtd.superficie);
+        safeSet('potencia_prevista', mtd.potenciaPrevista || data.contractedPower);
+        safeSet('tension', mtd.tensionNominal || '230');
 
-        // --- 4. ACOMETIDA & LGA (Caja General Proteccion) ---
-        // safeSet('cgp_esquema', data.cgpEsquema); 
-        // safeSet('lga_nivel_aislamiento', ...);
+        // --- 4. CAJA GENERAL PROTECCIÓN ---
+        safeSet('cgp_esquema', mtd.cgpEsquema);
+        safeSet('cgp_intensidad', mtd.cgpIntensidad);
 
         // --- 5. DERIVACIÓN INDIVIDUAL (DI) ---
-        safeSet('di_tipo_cable', data.diMaterial); // Cobre/Alum
-        safeSet('di_aislamiento', data.diAislamiento); // RZ1-K
-        safeSet('di_seccion', data.diSeccion); // 10, 16, 25...
-        safeSet('di_conductor_cpc', data.diCpc); // Si/No or section
-        safeSet('di_longitud', data.diLongitud);
+        safeSet('di_tipo_cable', mtd.diMaterial);
+        safeSet('di_aislamiento', mtd.diAislamiento);
+        safeSet('di_seccion', mtd.diSeccion);
+        safeSet('di_tubo', mtd.diDiametroTubo);
 
         // --- 6. PROTECCIONES (CGMP) ---
         if (data.cuadros && data.cuadros.length > 0) {
             const principal = data.cuadros[0];
             if (principal.mainBreaker) {
                 safeSet('iga_intensidad', principal.mainBreaker.amperage);
-                safeSet('iga_poder_corte', '6000'); // Standard household
                 safeSet('iga_polos', principal.mainBreaker.poles);
             }
 
-            // PCS (Sobretensiones)
-            safeSet('pms_tipo', 'II'); // Standard
-            safeSet('pms_intensidad_max', '15'); // kA default
-
-            // Diferenciales (Summary of first one usually)
             if (principal.differentials && principal.differentials.length > 0) {
                 const diff1 = principal.differentials[0];
                 safeSet('id_intensidad', diff1.amperage);
@@ -102,7 +86,7 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
         }
 
         // --- 7. TIERRA ---
-        safeSet('tierra_resistencia', data.tierraResistencia); // Ohms
+        safeSet('tierra_resistencia', mtd.tierraResistencia || data.verificaciones?.earthResistance);
         safeSet('tierra_aislamiento', data.aislamientoResistencia); // MOhms
 
         // --- MERGE GENERATED SCHEMATIC (ANEXO) ---

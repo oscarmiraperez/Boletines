@@ -223,7 +223,7 @@ export default function ExpedienteDetail() {
             a.remove();
         } catch (error: any) {
             console.error(error);
-            // alert(`Error generando MTD: ${error.message}`);
+            alert(`Error generando MTD: ${error.message}`);
         }
     };
 
