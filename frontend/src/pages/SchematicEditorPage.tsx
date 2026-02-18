@@ -10,7 +10,9 @@ import {
     convertFlatToTree,
     convertTreeToFlat
 } from '../utils/unifilarUtils';
-import { UnifilarSchematic } from '../types/unifilar';
+import { UnifilarSchematic, Device } from '../types/unifilar';
+import UnifilarVisualEditor from '../components/UnifilarVisualEditor';
+import { Search } from 'lucide-react';
 
 export default function SchematicEditorPage() {
     const { id } = useParams();
@@ -74,6 +76,21 @@ export default function SchematicEditorPage() {
         }
     };
 
+    const onUpdateDevices = (cuadroId: string, dispositivos: Device[]) => {
+        const currentCuadros = esquema.technicalData.cuadros || [];
+        const updatedCuadros = currentCuadros.map((c: any) =>
+            c.id === cuadroId ? { ...c, dispositivos } : c
+        );
+
+        setEsquema({
+            ...esquema,
+            technicalData: {
+                ...esquema.technicalData,
+                cuadros: updatedCuadros
+            }
+        });
+    };
+
     const saveEsquema = async (payload: any, successMessage?: string) => {
         try {
             // First, ensure the technicalData is properly typed and calculated
@@ -82,6 +99,7 @@ export default function SchematicEditorPage() {
             // Apply unifilar logic: numbering and poles
             const wrappedSchematic: UnifilarSchematic = {
                 id: (esquema as any).id,
+                origen: technicalDataToSave.origen || "editor_suelto",
                 derivacion: technicalDataToSave.derivacion,
                 cuadros: technicalDataToSave.cuadros
             };
@@ -268,24 +286,162 @@ export default function SchematicEditorPage() {
 
 
 
-            <TechnicalForms
-                initialData={{
-                    ...esquema.technicalData,
-                    cuadros: (esquema.technicalData.cuadros || []).map((c: any) => ({
-                        ...c,
-                        // Map tree back to flat for the UI
-                        ...(c.dispositivos ? convertTreeToFlat(c.dispositivos) : {})
-                    }))
-                }}
-                standalone
-                onSaveMtd={onSaveMtd}
-                onSaveVerificaciones={onSaveVerificaciones}
-                onCreateCuadro={onCreateCuadro}
-                onDeleteCuadro={onDeleteCuadro}
-                onSaveCuadroComponents={onSaveCuadroComponents}
-                onGenerateSchematic={onGenerateSchematic}
-                onUpdateDerivacion={onUpdateDerivacion}
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {/* Circuit Navigation List (Spec 7) */}
+                <div className="lg:col-span-1 space-y-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sticky top-24">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Circuitos</h3>
+                            <Search className="w-4 h-4 text-slate-500" />
+                        </div>
+                        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                            {(esquema.technicalData.cuadros || []).map((cuadro: any) => (
+                                <div key={cuadro.id} className="space-y-1">
+                                    <div className="text-[10px] font-bold text-sky-500 uppercase px-2 mb-1">{cuadro.name}</div>
+                                    {/* Flatten tree to list circuits */}
+                                    {(() => {
+                                        const results: any[] = [];
+                                        const findFinals = (nodes: Device[]) => {
+                                            nodes.forEach(n => {
+                                                if (n.tipo === 'final_circuito') results.push(n);
+                                                findFinals(n.hijos);
+                                            });
+                                        };
+                                        findFinals(cuadro.dispositivos || []);
+                                        return results.map(fin => (
+                                            <button
+                                                key={fin.id_dispositivo}
+                                                className="w-full text-left px-3 py-2 rounded-lg text-xs bg-slate-800/40 text-slate-300 hover:bg-slate-800 hover:text-white transition-all border border-transparent hover:border-slate-700 flex justify-between"
+                                            >
+                                                <span>{fin.codigo_circuito || 'C?'}</span>
+                                                <span className="text-slate-500">{fin.nombre_circuito_final}</span>
+                                            </button>
+                                        ));
+                                    })()}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => saveEsquema({ data: esquema.technicalData }, 'Esquema guardado correctamente')}
+                        className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2"
+                    >
+                        Guardar Todo
+                    </button>
+                </div>
+
+                {/* Visual Editor Area (Spec 5) */}
+                <div className="lg:col-span-3 space-y-6">
+                    {(esquema.technicalData.cuadros || []).map((cuadro: any) => (
+                        <div key={cuadro.id} className="bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200">
+                            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                                <h2 className="font-bold text-slate-800">{cuadro.name}</h2>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Editor Visual Unifilar</span>
+                            </div>
+                            <div className="p-4 bg-slate-100/50">
+                                <UnifilarVisualEditor
+                                    dispositivos={cuadro.dispositivos || []}
+                                    onUpdate={(disp) => onUpdateDevices(cuadro.id, disp)}
+                                    igaPoles={cuadro.dispositivos?.[0]?.num_polos || 2}
+                                />
+                            </div>
+                        </div>
+                    ))}
+
+                    <TechnicalForms
+                        initialData={{
+                            ...esquema.technicalData,
+                            cuadros: (esquema.technicalData.cuadros || []).map((c: any) => ({
+                                ...c,
+                                ...(c.dispositivos ? convertTreeToFlat(c.dispositivos) : {})
+                            }))
+                        }}
+                        standalone
+                        onSaveMtd={onSaveMtd}
+                        onSaveVerificaciones={onSaveVerificaciones}
+                        onCreateCuadro={onCreateCuadro}
+                        onDeleteCuadro={onDeleteCuadro}
+                        onSaveCuadroComponents={onSaveCuadroComponents}
+                        onGenerateSchematic={onGenerateSchematic}
+                        onUpdateDerivacion={onUpdateDerivacion}
+                    />
+                </div>
+            </div>
+
+            {/* Specification 2.2: General Data Modal for Standalone Editor */}
+            {isGeneralDataOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6">
+                            <h2 className="text-xl font-bold text-white mb-4">Datos generales del esquema</h2>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Tensión</label>
+                                    <select
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                                        defaultValue={esquema.technicalData.derivacion.tension}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            onUpdateDerivacion({ ...esquema.technicalData.derivacion, tension: val });
+                                        }}
+                                    >
+                                        <option value={230}>230 V</option>
+                                        <option value={400}>400 V</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Sección (mm²)</label>
+                                    <select
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                                        defaultValue={esquema.technicalData.derivacion.seccion}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            onUpdateDerivacion({ ...esquema.technicalData.derivacion, seccion: val });
+                                        }}
+                                    >
+                                        {[6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 250].map(s => (
+                                            <option key={s} value={s}>{s} mm²</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Material</label>
+                                    <select
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                                        defaultValue={esquema.technicalData.derivacion.material}
+                                        onChange={(e) => {
+                                            onUpdateDerivacion({ ...esquema.technicalData.derivacion, material: e.target.value });
+                                        }}
+                                    >
+                                        <option value="Cu">Cu</option>
+                                        <option value="Al">Al</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Aislamiento</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                                        defaultValue={esquema.technicalData.derivacion.aislamiento}
+                                        onBlur={(e) => {
+                                            onUpdateDerivacion({ ...esquema.technicalData.derivacion, aislamiento: e.target.value });
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-8">
+                                <button
+                                    onClick={() => setIsGeneralDataOpen(false)}
+                                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-lg transition-colors"
+                                >
+                                    Confirmar y Continuar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
