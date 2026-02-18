@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
-import { PDFDocument as PDFLib, PDFDict, PDFName } from 'pdf-lib';
+import { PDFDocument as PDFLib, PDFDict, PDFName, PDFNumber, PDFBool } from 'pdf-lib';
 import { generateUnifilarA3 } from '../utils/drawUnifilar';
 
 // Helper to log debug messages to a file
@@ -26,6 +26,14 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
                 if (obj.has(PDFName.of('T')) && obj.has(PDFName.of('FT'))) {
                     obj.delete(PDFName.of('RV'));
                     obj.delete(PDFName.of('DS'));
+
+                    // Also clear RichText flag (bit 26, index 25)
+                    const ff = obj.get(PDFName.of('Ff'));
+                    if (ff instanceof PDFNumber) {
+                        const currentFlags = ff.asNumber();
+                        const newFlags = currentFlags & ~(1 << 25);
+                        obj.set(PDFName.of('Ff'), PDFNumber.of(newFlags));
+                    }
                 }
             }
         }
@@ -104,7 +112,18 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
         // Here we just save the form data. The merging with the Schematic happens OUTSIDE calls usually,
         // or we append the schematic page here if 'schematicPath' is provided.
 
-        form.flatten();
+        // --- PREPARE FOR SAVING ---
+        // Ensure the PDF generates appearances for fields that don't have them
+        const catalog = pdfDoc.catalog;
+        const acroForm = catalog.getOrCreateAcroForm();
+        acroForm.dict.set(PDFName.of('NeedAppearances'), PDFBool.True);
+
+        try {
+            form.flatten();
+        } catch (err) {
+            logDebug(`Flattening failed, falling back to unflattened: ${err}`);
+        }
+
         const filledPdfBytes = await pdfDoc.save();
 
         // Generate Schematic if not provided
