@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
-import { PDFDocument as PDFLib } from 'pdf-lib';
+import { PDFDocument as PDFLib, PDFDict, PDFName } from 'pdf-lib';
 import { generateUnifilarA3 } from '../utils/drawUnifilar';
 
 // Helper to log debug messages to a file
@@ -15,6 +15,21 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
     try {
         const existingPdfBytes = fs.readFileSync(templatePath);
         const pdfDoc = await PDFLib.load(existingPdfBytes);
+
+        // --- WORKAROUND FOR RICH TEXT FIELDS CRASH ---
+        // This is necessary because pdf-lib throws when trying to access fields with the RichText flag.
+        // We strip the /RV (Rich Value) and /DS (Default Style) entries from all field dictionaries.
+        const entries = pdfDoc.context.enumerateIndirectObjects();
+        for (const [ref, obj] of entries) {
+            if (obj instanceof PDFDict) {
+                // Heuristic: objects with /T (Title) and /FT (Field Type) are form fields
+                if (obj.has(PDFName.of('T')) && obj.has(PDFName.of('FT'))) {
+                    obj.delete(PDFName.of('RV'));
+                    obj.delete(PDFName.of('DS'));
+                }
+            }
+        }
+
         const form = pdfDoc.getForm();
 
         // Helper to safely set fields
@@ -32,61 +47,56 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
                     }
                 }
             } catch (err) {
-                // Ignore missing fields
+                logDebug(`Error setting field ${fieldName}: ${err}`);
             }
         };
 
         const mtd = data.mtdData || {};
 
-        // --- 1. TITULAR ---
-        safeSet('titular_nombre', mtd.titularNombre || data.clientName);
-        safeSet('titular_nif', mtd.titularNif || data.clientNif);
-        safeSet('titular_direccion', mtd.titularDireccion || data.address);
+        // --- FIELD MAPPING (Using actual hierarchical names from F3610) ---
 
-        // --- 2. EMPLAZAMIENTO ---
-        safeSet('emplazamiento_direccion', mtd.direccion || data.address);
-        safeSet('emplazamiento_municipio', data.municipality);
-        safeSet('emplazamiento_cp', data.postalCode);
-        safeSet('emplazamiento_provincia', 'ALICANTE'); // Default
-        safeSet('emplazamiento_ref_catastral', mtd.refCatastral);
+        // 1. TITULAR
+        const p1 = 'form1[0].Pagina1[0].seccion\\.a[0]';
+        safeSet(`${p1}.A_TIT_NOM[0]`, mtd.titularNombre || data.clientName);
+        safeSet(`${p1}.A_TIT_DNI[0]`, mtd.titularNif || data.clientNif);
+        safeSet(`${p1}.A_TIT_DOM[0]`, mtd.titularDireccion || data.address);
+        safeSet(`${p1}.A_TIT_CP[0]`, data.postalCode);
+        safeSet(`${p1}.A_TIT_LOC[0]`, data.municipality);
+        safeSet(`${p1}.A_TIT_PRO[0]`, 'ALICANTE');
 
-        // --- 3. USO ---
-        const uso = String(mtd.usoInstalacion || 'vivienda').toLowerCase();
-        if (uso.includes('vivienda')) safeSet('uso_vivienda', true);
-        else if (uso.includes('local')) safeSet('uso_local', true);
-        else if (uso.includes('industri')) safeSet('uso_industrial', true);
+        // 2. EMPLAZAMIENTO
+        const p1b = 'form1[0].Pagina1[0].seccion\\.b[0]';
+        safeSet(`${p1b}.B_EMPL[0]`, mtd.direccion || data.address);
+        safeSet(`${p1b}.B_LOC[0]`, data.municipality);
+        safeSet(`${p1b}.B_CP[0]`, data.postalCode);
+        safeSet(`${p1b}.B_PROV[0]`, 'ALICANTE');
+        safeSet(`${p1b}.B_REFCAD[0]`, mtd.refCatastral);
+        safeSet(`${p1b}.B_Uso[0]`, mtd.usoInstalacion || 'vivienda');
+        safeSet(`${p1b}.B_Superficie[0]`, mtd.superficie);
+        safeSet(`${p1b}.B_P_Instalada[0]`, mtd.potenciaPrevista || data.contractedPower);
 
-        safeSet('superficie', mtd.superficie);
-        safeSet('potencia_prevista', mtd.potenciaPrevista || data.contractedPower);
-        safeSet('tension', mtd.tensionNominal || '230');
+        // 3. CAJA GENERAL PROTECCIÓN (CGP) & LGA
+        const p1c = 'form1[0].Pagina1[0].seccion\\.c[0]';
+        safeSet(`${p1c}.C_ENT[0]`, mtd.cgpEsquema); // Esquema CGP
+        safeSet(`${p1c}.C_DIM[0]`, mtd.cgpIntensidad); // Intensidad fusibles
 
-        // --- 4. CAJA GENERAL PROTECCIÓN ---
-        safeSet('cgp_esquema', mtd.cgpEsquema);
-        safeSet('cgp_intensidad', mtd.cgpIntensidad);
+        // 4. DERIVACIÓN INDIVIDUAL (DI)
+        safeSet(`${p1c}.C_CABL[0]`, mtd.diSeccion); // Sección en mm2
+        safeSet(`${p1c}.C_SISTI[0]`, mtd.diAislamiento); // Tipo aislamiento (RZ1-K etc)
+        safeSet(`${p1c}.C_INOM[0]`, mtd.diMaterial); // Cobre / Aluminio
 
-        // --- 5. DERIVACIÓN INDIVIDUAL (DI) ---
-        safeSet('di_tipo_cable', mtd.diMaterial);
-        safeSet('di_aislamiento', mtd.diAislamiento);
-        safeSet('di_seccion', mtd.diSeccion);
-        safeSet('di_tubo', mtd.diDiametroTubo);
-
-        // --- 6. PROTECCIONES (CGMP) ---
+        // 5. PROTECCIONES (CGMP)
         if (data.cuadros && data.cuadros.length > 0) {
             const principal = data.cuadros[0];
             if (principal.mainBreaker) {
-                safeSet('iga_intensidad', principal.mainBreaker.amperage);
-                safeSet('iga_polos', principal.mainBreaker.poles);
-            }
-
-            if (principal.differentials && principal.differentials.length > 0) {
-                const diff1 = principal.differentials[0];
-                safeSet('id_intensidad', diff1.amperage);
-                safeSet('id_sensibilidad', diff1.sensitivity);
+                // We use C_INNOM for IGA if available, or related fields
+                safeSet(`${p1c}.C_INNOM[0]`, principal.mainBreaker.amperage);
+                safeSet(`${p1c}.C_EFEM[0]`, principal.mainBreaker.poles);
             }
         }
 
-        // --- 7. TIERRA ---
-        safeSet('tierra_resistencia', mtd.tierraResistencia || data.verificaciones?.earthResistance);
+        // 6. TIERRA
+        safeSet(`${p1c}.C_RESPT[0]`, mtd.tierraResistencia || data.verificaciones?.earthResistance);
         safeSet('tierra_aislamiento', data.aislamientoResistencia); // MOhms
 
         // --- MERGE GENERATED SCHEMATIC (ANEXO) ---
