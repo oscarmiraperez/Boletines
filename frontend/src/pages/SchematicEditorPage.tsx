@@ -12,7 +12,6 @@ import {
 } from '../utils/unifilarUtils';
 import { UnifilarSchematic, Device } from '../types/unifilar';
 import UnifilarVisualEditor from '../components/UnifilarVisualEditor';
-import { Search } from 'lucide-react';
 
 export default function SchematicEditorPage() {
     const { id } = useParams();
@@ -271,74 +270,34 @@ export default function SchematicEditorPage() {
 
     return (
         <div>
-            <div className="mb-6 flex items-center gap-4">
-                <button
-                    onClick={() => navigate('/esquemas')}
-                    className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div>
-                    <h1 className="text-xl font-bold text-slate-100">{esquema?.name}</h1>
-                    <p className="text-sm text-slate-500">{esquema?.client} - {esquema?.address}</p>
-                </div>
-            </div>
-
-
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Circuit Navigation List (Spec 7) */}
-                <div className="lg:col-span-1 space-y-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sticky top-24">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Circuitos</h3>
-                            <Search className="w-4 h-4 text-slate-500" />
-                        </div>
-                        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                            {(esquema.technicalData.cuadros || []).map((cuadro: any) => (
-                                <div key={cuadro.id} className="space-y-1">
-                                    <div className="text-[10px] font-bold text-sky-500 uppercase px-2 mb-1">{cuadro.name}</div>
-                                    {/* Flatten tree to list circuits */}
-                                    {(() => {
-                                        const results: any[] = [];
-                                        const findFinals = (nodes: Device[]) => {
-                                            nodes.forEach(n => {
-                                                if (n.tipo === 'final_circuito') results.push(n);
-                                                findFinals(n.hijos);
-                                            });
-                                        };
-                                        findFinals(cuadro.dispositivos || []);
-                                        return results.map(fin => (
-                                            <button
-                                                key={fin.id_dispositivo}
-                                                className="w-full text-left px-3 py-2 rounded-lg text-xs bg-slate-800/40 text-slate-300 hover:bg-slate-800 hover:text-white transition-all border border-transparent hover:border-slate-700 flex justify-between"
-                                            >
-                                                <span>{fin.codigo_circuito || 'C?'}</span>
-                                                <span className="text-slate-500">{fin.nombre_circuito_final}</span>
-                                            </button>
-                                        ));
-                                    })()}
-                                </div>
-                            ))}
-                        </div>
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/esquemas')}
+                        className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div>
+                        <h1 className="text-xl font-bold text-slate-100">{esquema?.name}</h1>
+                        <p className="text-sm text-slate-500">{esquema?.client} - {esquema?.address}</p>
                     </div>
-
+                </div>
+                <div className="flex gap-2">
                     <button
                         onClick={() => saveEsquema({ data: esquema.technicalData }, 'Esquema guardado correctamente')}
-                        className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2"
+                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-2 rounded-lg transition-all shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2 text-sm"
                     >
                         Guardar Todo
                     </button>
                 </div>
+            </div>
 
+            <div className="space-y-6">
                 {/* Visual Editor Area (Spec 5) */}
-                <div className="lg:col-span-3 space-y-6">
+                <div className="space-y-6">
                     {(esquema.technicalData.cuadros || []).map((cuadro: any) => (
                         <div key={cuadro.id} className="bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200">
-                            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                                <h2 className="font-bold text-slate-800">{cuadro.name}</h2>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Editor Visual Unifilar</span>
-                            </div>
                             <div className="p-4 bg-slate-100/50">
                                 <UnifilarVisualEditor
                                     dispositivos={cuadro.dispositivos || []}

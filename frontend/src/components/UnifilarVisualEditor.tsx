@@ -193,55 +193,67 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
 
     return (
         <div className="relative min-h-[400px] w-full bg-slate-50 border-2 border-slate-200 rounded-xl overflow-auto p-20 cursor-grab active:cursor-grabbing">
+            {/* Instructions box - moved to top right and made smaller */}
+            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur p-3 rounded-lg border border-slate-200 shadow-sm max-w-[200px] z-10 text-left">
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase mb-1">Instrucciones</h4>
+                <ul className="text-[9px] space-y-1 text-slate-600">
+                    <li>• Click: Editar</li>
+                    <li>• Click derecho: Añadir</li>
+                </ul>
+            </div>
+
             <div className="relative mx-auto" style={{ width: 1 }}>
                 {dispositivos.map((d) => renderNode(d, 0, 0, 0))}
             </div>
 
-            {/* Bottom Panel (Spec 3/5) */}
+            {/* Bottom Panel (Refined Layout) */}
             {editingDevice && (
                 <div className="fixed bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom duration-300">
                     <div className="bg-white border-t border-slate-200 shadow-2xl p-6 rounded-t-3xl max-w-2xl mx-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-slate-900 uppercase text-sm tracking-widest">
-                                Editar {editingDevice.tipo}
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-slate-900 uppercase text-xs tracking-wider text-left">
+                                Propiedades: {editingDevice.tipo.replace('_', ' ')}
                             </h3>
-                            <button onClick={() => setEditingDevice(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+                            <button onClick={() => setEditingDevice(null)} className="text-slate-400 hover:text-slate-600 p-1">✕</button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Polos</label>
-                                <select
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm"
-                                    value={editingDevice.num_polos || 2}
-                                    onChange={(e) => setEditingDevice({ ...editingDevice, num_polos: parseInt(e.target.value) })}
-                                    disabled={igaPoles === 2} // Spec 4: Limit by IGA
-                                >
-                                    <option value={2}>2P</option>
-                                    {igaPoles === 4 && <option value={4}>4P</option>}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Calibre (A)</label>
-                                <select
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm"
-                                    value={editingDevice.calibre_A || 16}
-                                    onChange={(e) => setEditingDevice({ ...editingDevice, calibre_A: parseInt(e.target.value) })}
-                                >
-                                    {[10, 16, 20, 25, 32, 40, 50, 63, 100, 125, 160, 200, 250, 400, 600].map(a => (
-                                        <option key={a} value={a}>{a}A</option>
-                                    ))}
-                                </select>
+                        <div className="space-y-4 text-left">
+                            {/* Same Row for Poles and Amperage */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Polos</label>
+                                    <select
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none transition-all"
+                                        value={editingDevice.num_polos || 2}
+                                        onChange={(e) => setEditingDevice({ ...editingDevice!, num_polos: parseInt(e.target.value) })}
+                                        disabled={igaPoles === 2}
+                                    >
+                                        <option value={2}>2P</option>
+                                        {igaPoles === 4 && <option value={4}>4P</option>}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Calibre (A)</label>
+                                    <select
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none transition-all"
+                                        value={editingDevice.calibre_A || 16}
+                                        onChange={(e) => setEditingDevice({ ...editingDevice!, calibre_A: parseInt(e.target.value) })}
+                                    >
+                                        {[10, 16, 20, 25, 32, 40, 50, 63, 100, 125, 160, 200, 250, 400, 600].map(a => (
+                                            <option key={a} value={a}>{a}A</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             {editingDevice.tipo === 'diferencial' && (
-                                <>
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Sensibilidad (mA)</label>
                                         <select
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none transition-all"
                                             value={editingDevice.sensibilidad_mA || 30}
-                                            onChange={(e) => setEditingDevice({ ...editingDevice, sensibilidad_mA: e.target.value })}
+                                            onChange={(e) => setEditingDevice({ ...editingDevice!, sensibilidad_mA: e.target.value })}
                                         >
                                             <option value={30}>30mA</option>
                                             <option value={300}>300mA</option>
@@ -252,9 +264,9 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
                                     <div>
                                         <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tipo ID</label>
                                         <select
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none transition-all"
                                             value={editingDevice.tipo_diferencial || 'AC'}
-                                            onChange={(e) => setEditingDevice({ ...editingDevice, tipo_diferencial: e.target.value as any })}
+                                            onChange={(e) => setEditingDevice({ ...editingDevice!, tipo_diferencial: e.target.value as any })}
                                         >
                                             <option value="AC">AC</option>
                                             <option value="A">A</option>
@@ -262,22 +274,22 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
                                             <option value="B">B</option>
                                         </select>
                                     </div>
-                                </>
+                                </div>
                             )}
 
                             {editingDevice.tipo === 'final_circuito' && (
                                 <>
-                                    <div className="col-span-2">
+                                    <div>
                                         <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Uso del Circuito</label>
                                         <select
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none transition-all"
                                             value={editingDevice.uso_base || 'Otros'}
                                             onChange={(e) => {
                                                 const val = e.target.value;
                                                 setEditingDevice({
-                                                    ...editingDevice,
+                                                    ...editingDevice!,
                                                     uso_base: val as any,
-                                                    nombre_circuito_usuario: val === 'Otros' ? (editingDevice.nombre_circuito_usuario || '') : null
+                                                    nombre_circuito_usuario: val === 'Otros' ? (editingDevice?.nombre_circuito_usuario || '') : null
                                                 });
                                             }}
                                         >
@@ -294,15 +306,14 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
                                         </select>
                                     </div>
                                     {editingDevice.uso_base === 'Otros' && (
-                                        <div className="col-span-2">
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre Personalizado (Obligatorio)</label>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre Personalizado (Opcional)</label>
                                             <input
                                                 type="text"
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none transition-all"
                                                 placeholder="Ej: Tomas terrazo"
                                                 value={editingDevice.nombre_circuito_usuario || ''}
-                                                onChange={(e) => setEditingDevice({ ...editingDevice, nombre_circuito_usuario: e.target.value })}
-                                                required
+                                                onChange={(e) => setEditingDevice({ ...editingDevice!, nombre_circuito_usuario: e.target.value })}
                                             />
                                         </div>
                                     )}
@@ -311,22 +322,14 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
                         </div>
 
                         <button
-                            onClick={() => handleSaveDevice(editingDevice)}
-                            className="mt-6 w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-all shadow-lg"
+                            onClick={() => handleSaveDevice(editingDevice!)}
+                            className="mt-8 w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 transition-all shadow-lg text-sm"
                         >
                             Guardar Cambios
                         </button>
                     </div>
                 </div>
             )}
-
-            <div className="absolute top-4 left-4 bg-white/80 backdrop-blur p-4 rounded-xl border border-slate-200 shadow-sm max-w-[200px]">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Instrucciones</h4>
-                <ul className="text-[10px] space-y-1 text-slate-600">
-                    <li>• Pulsa un dispositivo para editar propiedades.</li>
-                    <li>• Mantén pulsado (o click derecho) para añadir ramas.</li>
-                </ul>
-            </div>
         </div>
     );
 }
