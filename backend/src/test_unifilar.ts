@@ -3,29 +3,56 @@ import path from 'path';
 import fs from 'fs';
 
 const testData = {
+    id: "test-001",
+    origen: "editor_suelto",
+    derivacion: {
+        tension: 230,
+        seccion: 6,
+        material: "Cu",
+        aislamiento: "RZ1-K",
+        texto_nomenclatura: "2x6 mm2 Cu RZ1-K AS"
+    },
     cuadros: [
         {
+            id: "cuadro-1",
             name: "Cuadro General",
-            mainBreaker: { amperage: 40, poles: 2 },
-            differentials: [
+            dispositivos: [
                 {
-                    amperage: 40,
-                    sensitivity: 30,
-                    poles: 2,
-                    circuits: [
-                        { name: "C1", description: "Alumbrado", amperage: 10, poles: 2, section: 1.5 },
-                        { name: "C2", description: "Enchufes", amperage: 16, poles: 2, section: 2.5 },
-                        { name: "C3", description: "Cocina", amperage: 25, poles: 2, section: 6 },
-                        { name: "C4", description: "Lavadora", amperage: 20, poles: 2, section: 4 },
-                        { name: "C5", description: "Baño", amperage: 16, poles: 2, section: 2.5 },
-                    ]
-                },
-                {
-                    amperage: 25,
-                    sensitivity: 30,
-                    poles: 2,
-                    circuits: [
-                        { name: "C6", description: "Aire Acondicionado", amperage: 20, poles: 2, section: 4 },
+                    id: "iga-1",
+                    tipo: "magnetotermico",
+                    num_polos: 2,
+                    calibre_A: 40,
+                    etiqueta_texto: "IGA 40A",
+                    hijos: [
+                        {
+                            id: "diff-1",
+                            tipo: "diferencial",
+                            num_polos: 2,
+                            calibre_A: 40,
+                            sensibilidad_mA: 30,
+                            tipo_diferencial: "AC",
+                            etiqueta_texto: "Diferencial 1",
+                            hijos: [
+                                {
+                                    id: "p1",
+                                    tipo: "magnetotermico",
+                                    num_polos: 2,
+                                    calibre_A: 10,
+                                    etiqueta_texto: "Magneto 10A",
+                                    hijos: [
+                                        {
+                                            id: "f1",
+                                            tipo: "final_circuito",
+                                            uso_base: "Alumbrado",
+                                            nombre_circuito_final: "Alumbrado",
+                                            codigo_circuito: "C1",
+                                            etiqueta_texto: "Alumbrado",
+                                            hijos: []
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
                     ]
                 }
             ]
