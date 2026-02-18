@@ -67,6 +67,10 @@ export const createMechanismProject = (data: { name: string; description?: strin
     method: 'POST',
     body: JSON.stringify(data)
 });
+export const updateMechanismProject = (id: string, data: any) => apiRequest(`/mechanisms/projects/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+});
 export const getMechanismProjectDetails = (id: string) => apiRequest(`/mechanisms/projects/${id}`);
 export const deleteMechanismProject = (id: string) => apiRequest(`/mechanisms/projects/${id}`, {
     method: 'DELETE'
