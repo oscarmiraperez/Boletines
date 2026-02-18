@@ -105,8 +105,7 @@ const DifferentialItem = ({
                                 {control._formValues.differentials[index]?.circuits[k]?.uso_base === 'Otros' && (
                                     <input
                                         {...control.register(`differentials.${index}.circuits.${k}.nombre_circuito_usuario`)}
-                                        placeholder="Nombre (Tomas terrazo)"
-                                        required
+                                        placeholder="Nombre (Opcional)"
                                         className="block w-full border-slate-700 bg-slate-900 text-slate-300 rounded text-xs px-2 py-1.5 placeholder-slate-600 focus:ring-sky-500 focus:border-sky-500"
                                     />
                                 )}

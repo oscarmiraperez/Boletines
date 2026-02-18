@@ -11,7 +11,6 @@ import {
     convertTreeToFlat
 } from '../utils/unifilarUtils';
 import { UnifilarSchematic, Device } from '../types/unifilar';
-import UnifilarVisualEditor from '../components/UnifilarVisualEditor';
 
 export default function SchematicEditorPage() {
     const { id } = useParams();
@@ -75,20 +74,6 @@ export default function SchematicEditorPage() {
         }
     };
 
-    const onUpdateDevices = (cuadroId: string, dispositivos: Device[]) => {
-        const currentCuadros = esquema.technicalData.cuadros || [];
-        const updatedCuadros = currentCuadros.map((c: any) =>
-            c.id === cuadroId ? { ...c, dispositivos } : c
-        );
-
-        setEsquema({
-            ...esquema,
-            technicalData: {
-                ...esquema.technicalData,
-                cuadros: updatedCuadros
-            }
-        });
-    };
 
     const saveEsquema = async (payload: any, successMessage?: string) => {
         try {
@@ -294,38 +279,23 @@ export default function SchematicEditorPage() {
             </div>
 
             <div className="space-y-6">
-                {/* Visual Editor Area (Spec 5) */}
-                <div className="space-y-6">
-                    {(esquema.technicalData.cuadros || []).map((cuadro: any) => (
-                        <div key={cuadro.id} className="bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200">
-                            <div className="p-4 bg-slate-100/50">
-                                <UnifilarVisualEditor
-                                    dispositivos={cuadro.dispositivos || []}
-                                    onUpdate={(disp) => onUpdateDevices(cuadro.id, disp)}
-                                    igaPoles={cuadro.dispositivos?.[0]?.num_polos || 2}
-                                />
-                            </div>
-                        </div>
-                    ))}
-
-                    <TechnicalForms
-                        initialData={{
-                            ...esquema.technicalData,
-                            cuadros: (esquema.technicalData.cuadros || []).map((c: any) => ({
-                                ...c,
-                                ...(c.dispositivos ? convertTreeToFlat(c.dispositivos) : {})
-                            }))
-                        }}
-                        standalone
-                        onSaveMtd={onSaveMtd}
-                        onSaveVerificaciones={onSaveVerificaciones}
-                        onCreateCuadro={onCreateCuadro}
-                        onDeleteCuadro={onDeleteCuadro}
-                        onSaveCuadroComponents={onSaveCuadroComponents}
-                        onGenerateSchematic={onGenerateSchematic}
-                        onUpdateDerivacion={onUpdateDerivacion}
-                    />
-                </div>
+                <TechnicalForms
+                    initialData={{
+                        ...esquema.technicalData,
+                        cuadros: (esquema.technicalData.cuadros || []).map((c: any) => ({
+                            ...c,
+                            ...(c.dispositivos ? convertTreeToFlat(c.dispositivos) : {})
+                        }))
+                    }}
+                    standalone
+                    onSaveMtd={onSaveMtd}
+                    onSaveVerificaciones={onSaveVerificaciones}
+                    onCreateCuadro={onCreateCuadro}
+                    onDeleteCuadro={onDeleteCuadro}
+                    onSaveCuadroComponents={onSaveCuadroComponents}
+                    onGenerateSchematic={onGenerateSchematic}
+                    onUpdateDerivacion={onUpdateDerivacion}
+                />
             </div>
 
             {/* Specification 2.2: General Data Modal for Standalone Editor */}

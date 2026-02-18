@@ -70,7 +70,7 @@ export default function Layout() {
                                 <span className="hidden sm:inline">Salir</span>
                                 <span className="sm:hidden">✕</span>
                             </button>
-                            <span className="text-[10px] text-slate-600 font-mono hidden sm:inline-block pr-2">v2.10</span>
+                            <span className="text-[10px] text-slate-600 font-mono hidden sm:inline-block pr-2">v2.11</span>
                         </div>
                     </div>
                 </div>
