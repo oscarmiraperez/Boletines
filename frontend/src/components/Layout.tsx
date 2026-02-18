@@ -17,9 +17,7 @@ export default function Layout() {
                                 <span className="block text-sm font-semibold tracking-wide text-slate-200 group-hover:text-white transition-colors">
                                     Esquemas
                                 </span>
-                                <span className="block text-[10px] uppercase tracking-[0.22em] text-slate-500">
-                                    Indep.
-                                </span>
+
                             </div>
                         </Link>
 
