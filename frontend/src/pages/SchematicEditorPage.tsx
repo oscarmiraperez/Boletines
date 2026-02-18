@@ -17,6 +17,7 @@ export default function SchematicEditorPage() {
     const navigate = useNavigate();
     const [esquema, setEsquema] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isGeneralDataOpen, setIsGeneralDataOpen] = useState(false);
 
     useEffect(() => {
         fetchEsquema();
@@ -25,39 +26,45 @@ export default function SchematicEditorPage() {
     const fetchEsquema = async () => {
         try {
             const data = await apiRequest(`/esquemas/${id}`);
-            // Parse 'data' field which is a JSON string in DB
-            let parsedData = {};
+            let parsedData: any = {};
             try {
                 parsedData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
             } catch (e) {
                 console.error("Error parsing esquema data JSON", e);
             }
 
-            // Merge top-level fields into the structure TechnicalForms expects
+            // Specification 2: Source handling
+            const origen = parsedData.origen || "editor_suelto";
+
+            // Specification 2.1 & 2.2: Initial derivation
+            const derivacion = parsedData.derivacion || {
+                tension: 230,
+                seccion: 6,
+                material: 'Cu',
+                aislamiento: 'ES07Z1-K',
+                texto_nomenclatura: '2x6 mm2 Cu ES07Z1-K AS'
+            };
+
             const technicalData = {
-                ...parsedData, // cuadros, verificaciones, mtdData (internal)
-                id: data.id,
-                derivacion: (parsedData as any).derivacion || {
-                    tension: 230,
-                    seccion: 6,
-                    material: 'Cu',
-                    aislamiento: 'ES07Z1-K',
-                    texto_nomenclatura: '2x6 mm2 Cu ES07Z1-K AS'
+                ...parsedData,
+                origen,
+                derivacion: {
+                    ...derivacion,
+                    texto_nomenclatura: generarTextoNomenclatura(derivacion)
                 },
-                installation: { // Mock installation object to populate mtd defaults if needed
+                installation: {
                     client: { name: data.client, nif: '' },
                     address: data.address,
                     contractedPower: data.power
-                },
-                mtdData: {
-                    ...(parsedData as any).mtdData,
-                    titularNombre: data.client,
-                    direccion: data.address,
-                    potenciaPrevista: data.power
                 }
             };
 
             setEsquema({ ...data, technicalData });
+
+            // Show setup modal if suelto and incomplete
+            if (origen === "editor_suelto" && !parsedData.derivacion) {
+                setIsGeneralDataOpen(true);
+            }
         } catch (error) {
             console.error(error);
             alert('Error cargando el esquema');

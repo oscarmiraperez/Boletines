@@ -51,8 +51,7 @@ export function recalcularNumeracionCircuitos(schematic: UnifilarSchematic): voi
         }
 
         for (const fin of finales) {
-            const usoBase = fin.uso_base;
-            if (!usoBase) continue;
+            const usoBase = fin.uso_base || 'Otros';
 
             contadorCodigo += 1;
             fin.codigo_circuito = "C" + contadorCodigo;
@@ -62,7 +61,7 @@ export function recalcularNumeracionCircuitos(schematic: UnifilarSchematic): voi
                     fin.nombre_circuito_usuario && fin.nombre_circuito_usuario.trim().length > 0
                         ? fin.nombre_circuito_usuario.trim()
                         : "Otros";
-            } else if (USOS_CON_NUMERACION.includes(usoBase)) {
+            } else if (USOS_CON_NUMERACION.includes(usoBase as UsoBase)) {
                 contadoresUso[usoBase] = (contadoresUso[usoBase] || 0) + 1;
                 const indice = contadoresUso[usoBase];
                 fin.nombre_circuito_final = usoBase + " " + indice;
@@ -70,7 +69,8 @@ export function recalcularNumeracionCircuitos(schematic: UnifilarSchematic): voi
                 fin.nombre_circuito_final = usoBase;
             }
 
-            fin.etiqueta_texto = fin.nombre_circuito_final || fin.etiqueta_texto;
+            // etiqeta_texto should be equal to nombre_circuito_final for finals
+            fin.etiqueta_texto = fin.nombre_circuito_final;
         }
     }
 }
@@ -84,20 +84,35 @@ export function ajustarPolosSegunGeneral(schematic: UnifilarSchematic): void {
     for (const cuadro of schematic.cuadros) {
         const iga = cuadro.dispositivos.find(d =>
             d.tipo === 'magnetotermico' &&
-            (d.etiqueta_texto?.toUpperCase().includes('IGA') || true)
+            d.etiqueta_texto?.toUpperCase().startsWith('IGA')
         );
 
         if (!iga) continue;
 
         if (iga.num_polos === 2) {
+            // Force 2P on all descendants
             for (const root of cuadro.dispositivos) {
                 recorrerDispositivos(root, (nodo) => {
                     if (nodo.tipo === 'magnetotermico' || nodo.tipo === 'diferencial') {
                         nodo.num_polos = 2;
+                        // Update etiquetas
+                        actualizarEtiquetaDispositivo(nodo);
                     }
                 });
             }
         }
+    }
+}
+
+/**
+ * Updates the etiqueta_texto based on current properties
+ */
+export function actualizarEtiquetaDispositivo(nodo: Device): void {
+    if (nodo.tipo === 'magnetotermico') {
+        const type = nodo.etiqueta_texto?.toUpperCase().startsWith('IGA') ? 'IGA' : 'PIA';
+        nodo.etiqueta_texto = `${type} ${nodo.num_polos}P ${nodo.calibre_A}A`;
+    } else if (nodo.tipo === 'diferencial') {
+        nodo.etiqueta_texto = `ID ${nodo.num_polos}P ${nodo.calibre_A}A ${nodo.sensibilidad_mA}mA ${nodo.tipo_diferencial || 'AC'}`;
     }
 }
 
@@ -125,9 +140,9 @@ export function convertFlatToTree(cuadro: any): Device[] {
         const iga: Device = {
             id_dispositivo: `iga-${Math.random().toString(36).substr(2, 9)}`,
             tipo: 'magnetotermico',
-            etiqueta_texto: `IGA ${cuadro.mainBreaker.poles}P ${cuadro.mainBreaker.amperage}A`,
             num_polos: cuadro.mainBreaker.poles,
             calibre_A: cuadro.mainBreaker.amperage,
+            etiqueta_texto: `IGA ${cuadro.mainBreaker.poles}P ${cuadro.mainBreaker.amperage}A`,
             hijos: []
         };
         dispositivos.push(iga);
@@ -139,13 +154,14 @@ export function convertFlatToTree(cuadro: any): Device[] {
             const dNode: Device = {
                 id_dispositivo: `dif-${Math.random().toString(36).substr(2, 9)}`,
                 tipo: 'diferencial',
-                etiqueta_texto: `DIF ${diff.poles}P ${diff.amperage}A ${diff.sensitivity}mA`,
                 num_polos: diff.poles,
                 calibre_A: diff.amperage,
                 sensibilidad_mA: diff.sensitivity,
+                tipo_diferencial: diff.type || 'AC',
+                etiqueta_texto: `ID ${diff.poles}P ${diff.amperage}A ${diff.sensitivity}mA ${diff.type || 'AC'}`,
                 hijos: []
             };
-            parent.hijos?.push(dNode);
+            parent.hijos.push(dNode);
 
             (diff.circuits || []).forEach((circ: any) => {
                 const mtNode: Device = {
@@ -153,9 +169,10 @@ export function convertFlatToTree(cuadro: any): Device[] {
                     tipo: 'magnetotermico',
                     num_polos: circ.poles,
                     calibre_A: circ.amperage,
+                    etiqueta_texto: `PIA ${circ.poles}P ${circ.amperage}A`,
                     hijos: []
                 };
-                dNode.hijos?.push(mtNode);
+                dNode.hijos.push(mtNode);
 
                 const finalNode: Device = {
                     id_dispositivo: `final-${Math.random().toString(36).substr(2, 9)}`,
@@ -164,9 +181,11 @@ export function convertFlatToTree(cuadro: any): Device[] {
                     seccion: circ.seccion || 2.5,
                     num_polos: circ.poles,
                     calibre_A: circ.amperage,
-                    uso_base: circ.uso_base || 'Otros'
+                    uso_base: circ.uso_base || 'Otros',
+                    etiqueta_texto: circ.description || (circ.uso_base || 'Otros'),
+                    hijos: []
                 };
-                mtNode.hijos?.push(finalNode);
+                mtNode.hijos.push(finalNode);
             });
         });
     }

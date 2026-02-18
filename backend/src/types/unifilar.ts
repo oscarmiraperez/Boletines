@@ -21,17 +21,17 @@ export type UsoBase =
 export interface Device {
     id_dispositivo: string;
     tipo: DeviceType;
-    num_polos: 2 | 4;
-    calibre_A: Amperage;
-    sensibilidad_mA?: Sensitivity;
+    num_polos: number | null;
+    calibre_A: number | null;
+    sensibilidad_mA?: number | string | null;
     tipo_diferencial?: DifferentialType;
-    etiqueta_texto?: string;
-    hijos?: Device[];
+    etiqueta_texto: string;
+    hijos: Device[];
     seccion?: number;
 
     // final_circuito fields
     uso_base?: UsoBase;
-    nombre_circuito_usuario?: string;
+    nombre_circuito_usuario?: string | null;
     nombre_circuito_final?: string;
     codigo_circuito?: string;
 }
@@ -52,6 +52,7 @@ export interface DerivationData {
 
 export interface UnifilarSchematic {
     id: string;
+    origen: "boletin" | "editor_suelto";
     derivacion: DerivationData;
     cuadros: Cuadro[];
 }
