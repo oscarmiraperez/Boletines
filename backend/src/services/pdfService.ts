@@ -118,11 +118,8 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
         const acroForm = catalog.getOrCreateAcroForm();
         acroForm.dict.set(PDFName.of('NeedAppearances'), PDFBool.True);
 
-        try {
-            form.flatten();
-        } catch (err) {
-            logDebug(`Flattening failed, falling back to unflattened: ${err}`);
-        }
+        // Explicitly remove XFA to avoid conflicts in hybrid forms
+        acroForm.dict.delete(PDFName.of('XFA'));
 
         const filledPdfBytes = await pdfDoc.save();
 

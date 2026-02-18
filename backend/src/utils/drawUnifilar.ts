@@ -2,60 +2,49 @@ import PDFDocument from 'pdfkit';
 import fs from 'fs';
 
 // --- CONSTANTS ---
-const PAGE_WIDTH = 1190.55; // A3 Landscape (420mm)
-const PAGE_HEIGHT = 841.89; // (297mm)
-const LEFT_MARGIN_BINDING = 56.7; // 20mm
-const OTHER_MARGINS = 28.35;        // 10mm
+const PAGE_WIDTH = 1190.55; // A3 Landscape
+const PAGE_HEIGHT = 841.89;
+const MARGIN = 40;
 
 // Y Positions
-const HEADER_Y = 120;      // Origin/IGA height
-const MAIN_BUS_Y = 220;    // Main Horizontal Bus
-const DIFF_Y = 300;        // Differentials
-const SUB_BUS_Y = 400;     // Sub-buses for circuits
-const CIRC_Y = 450;        // Circuits (Breakers)
-const TABLE_START_Y = 570; // Start of the data table
-const TABLE_HEIGHT = 150;  // Height of the table
+const HEADER_Y = 100;
+const MAIN_BUS_Y = 180;
+const DIFF_Y = 260;
+const SUB_BUS_Y = 340;
+const CIRC_Y = 390;
+const TABLE_START_Y = 550;
 
-// Spacing
-const CIRCUIT_WIDTH = 60;   // Increased width for better readability
-const BLOCK_GAP = 20;
+const CIRCUIT_WIDTH = 55;
+const BLOCK_GAP = 15;
 
 // --- SYMBOL DRAWING HELPERS ---
 
-const drawSymbolText = (doc: PDFKit.PDFDocument, text: string, x: number, y: number, fontSize: number = 7, align: 'center' | 'left' | 'right' = 'center', rotate: boolean = false) => {
+const drawSymbolText = (doc: PDFKit.PDFDocument, text: string, x: number, y: number, fontSize: number = 7, align: 'center' | 'left' | 'right' = 'center') => {
     doc.save();
     doc.font('Helvetica').fontSize(fontSize).fillColor('black');
-    if (rotate) {
-        doc.translate(x, y);
-        doc.rotate(-90);
-        doc.text(text, 0, 0, { align: 'left' });
-    } else {
-        doc.text(text, x - 30, y, { width: 60, align });
-    }
+    doc.text(text, x - 25, y, { width: 50, align });
     doc.restore();
 };
 
-const drawMagnetotermico = (doc: PDFKit.PDFDocument, x: number, y: number, label: string, amperage: number, poles: number, pdc: string = '6kA') => {
+const drawMagnetotermico = (doc: PDFKit.PDFDocument, x: number, y: number, label: string, amperage: number, poles: number) => {
     doc.save();
     doc.translate(x, y);
     doc.lineWidth(1).strokeColor('black');
 
-    // Line In
-    doc.moveTo(0, -15).lineTo(0, -5).stroke();
-    // Switch Element
-    doc.moveTo(0, -5).lineTo(8, 6).stroke(); // Blade
-    doc.moveTo(0, 6).lineTo(0, 15).stroke(); // Line Out
+    // Classic Representation
+    doc.moveTo(0, -12).lineTo(0, -4).stroke(); // Top line
+    doc.moveTo(0, -4).lineTo(6, 4).stroke();   // Switch blade
+    doc.moveTo(0, 4).lineTo(0, 12).stroke();   // Bottom line
 
-    // Thermal/Magnetic indicator (X)
-    doc.moveTo(2, -2).lineTo(6, 4).stroke();
-    doc.moveTo(6, -2).lineTo(2, 4).stroke();
+    // Thermal/Magnetic hook (Bezier instead of arc to avoid lint/missing prop)
+    doc.moveTo(-3, 4).bezierCurveTo(-3, 0, 3, 0, 3, 4).stroke();
 
     doc.restore();
 
-    // Labels
-    if (label) drawSymbolText(doc, label, x, y - 25, 7, 'center');
-    drawSymbolText(doc, `${amperage}A`, x + 8, y - 2, 7, 'left');
-    drawSymbolText(doc, `${poles}P`, x + 8, y + 6, 6, 'left');
+    if (label) drawSymbolText(doc, label, x, y - 22, 7, 'center');
+    doc.font('Helvetica').fontSize(6);
+    doc.text(`${amperage}A`, x + 8, y - 3);
+    doc.text(`${poles}P`, x + 8, y + 3);
 };
 
 const drawDiferencial = (doc: PDFKit.PDFDocument, x: number, y: number, label: string, amperage: number, sensitivity: number) => {
@@ -63,89 +52,53 @@ const drawDiferencial = (doc: PDFKit.PDFDocument, x: number, y: number, label: s
     doc.translate(x, y);
     doc.strokeColor('black').lineWidth(1);
 
-    // Line In/Out
-    doc.moveTo(0, -15).lineTo(0, 15).stroke();
+    doc.moveTo(0, -12).lineTo(0, -4).stroke();
+    doc.moveTo(0, -4).lineTo(7, 5).stroke(); // Blade
+    doc.moveTo(0, 5).lineTo(0, 12).stroke();
+
     // Toroid
-    doc.ellipse(0, 0, 12, 6).stroke();
-    // Linkage
-    doc.dash(1, { space: 1 });
-    doc.moveTo(0, -5).lineTo(4, -12).stroke();
-    doc.undash();
+    doc.circle(0, 0, 8).stroke();
 
     doc.restore();
 
-    // Labels
-    if (label) drawSymbolText(doc, label, x, y - 25, 7, 'center');
-    drawSymbolText(doc, `ID ${amperage}A`, x + 10, y - 4, 7, 'left');
-    drawSymbolText(doc, `${sensitivity}mA`, x + 10, y + 4, 7, 'left');
+    if (label) drawSymbolText(doc, label, x, y - 22, 7, 'center');
+    doc.font('Helvetica').fontSize(6);
+    doc.text(`ID ${amperage}A`, x + 9, y - 3);
+    doc.text(`${sensitivity}mA`, x + 9, y + 3);
 };
 
 const drawSurgeProtection = (doc: PDFKit.PDFDocument, x: number, y: number) => {
     doc.save();
     doc.translate(x, y);
     doc.strokeColor('black').lineWidth(1);
-    doc.moveTo(0, -15).lineTo(0, 0).stroke();
-    doc.rect(-10, 0, 20, 20).stroke();
-    doc.moveTo(0, 20).lineTo(0, 28).stroke();
+    doc.moveTo(0, -12).lineTo(0, 0).stroke();
+    doc.rect(-8, 0, 16, 16).stroke();
+    doc.moveTo(0, 16).lineTo(0, 22).stroke();
     // Ground
-    doc.moveTo(-8, 28).lineTo(8, 28).stroke();
-    doc.moveTo(-5, 30).lineTo(5, 30).stroke();
-    doc.moveTo(-2, 32).lineTo(2, 32).stroke();
+    doc.moveTo(-6, 22).lineTo(6, 22).stroke();
+    doc.moveTo(-4, 24).lineTo(4, 24).stroke();
     doc.restore();
-    drawSymbolText(doc, 'P. Sobretens.', x, y + 40, 6, 'center');
-};
-
-const drawProfessionalFrame = (doc: PDFKit.PDFDocument) => {
-    doc.save();
-    doc.lineWidth(1.5).strokeColor('black');
-    // Main boundary (UNE 1035)
-    doc.rect(LEFT_MARGIN_BINDING, OTHER_MARGINS, PAGE_WIDTH - LEFT_MARGIN_BINDING - OTHER_MARGINS, PAGE_HEIGHT - (OTHER_MARGINS * 2)).stroke();
-
-    // Grid markers (optional but nice)
-    doc.lineWidth(0.5).fontSize(8);
-    // Vertical (A, B, C...)
-    const vSteps = ['D', 'C', 'B', 'A'];
-    vSteps.forEach((label, i) => {
-        const y = OTHER_MARGINS + (i + 0.5) * ((PAGE_HEIGHT - 2 * OTHER_MARGINS) / 4);
-        doc.text(label, LEFT_MARGIN_BINDING - 15, y);
-        doc.text(label, PAGE_WIDTH - OTHER_MARGINS + 5, y);
-    });
-    // Horizontal (1, 2, 3...)
-    for (let i = 1; i <= 8; i++) {
-        const x = LEFT_MARGIN_BINDING + (i - 0.5) * ((PAGE_WIDTH - LEFT_MARGIN_BINDING - OTHER_MARGINS) / 8);
-        doc.text(i.toString(), x, OTHER_MARGINS - 15);
-        doc.text(i.toString(), x, PAGE_HEIGHT - OTHER_MARGINS + 5);
-    }
-    doc.restore();
+    drawSymbolText(doc, 'P. Sobretens.', x, y + 30, 6, 'center');
 };
 
 const drawCajetin = (doc: PDFKit.PDFDocument, data: any, pageNum: number, totalPages: number) => {
-    const boxW = 524; // 185mm (UNE Standard)
-    const boxH = 90;
-    const x = PAGE_WIDTH - OTHER_MARGINS - boxW;
-    const y = PAGE_HEIGHT - OTHER_MARGINS - boxH;
+    const boxW = 400;
+    const boxH = 70;
+    const x = PAGE_WIDTH - MARGIN - boxW;
+    const y = PAGE_HEIGHT - MARGIN - boxH;
 
     doc.save();
     doc.lineWidth(1).strokeColor('black');
     doc.rect(x, y, boxW, boxH).stroke();
 
-    // Table lines
-    doc.moveTo(x, y + 30).lineTo(x + boxW, y + 30).stroke();
-    doc.moveTo(x + 350, y).lineTo(x + 350, y + 90).stroke(); // Shift vertical separator
-    doc.moveTo(x + 350, y + 45).lineTo(x + boxW, y + 45).stroke();
+    doc.font('Helvetica-Bold').fontSize(12).text('ESQUEMA UNIFILAR', x + 10, y + 10);
+    doc.font('Helvetica').fontSize(8);
+    doc.text(`Titular: ${data.clientName || ''}`, x + 10, y + 30);
+    doc.text(`Dirección: ${data.address || ''}`, x + 10, y + 42);
+    doc.text(`Expediente: ${data.expedienteId || data.code || ''}`, x + 10, y + 54);
 
-    // Content
-    doc.font('Helvetica-Bold').fontSize(14).text('ESQUEMA UNIFILAR (MTD)', x + 10, y + 10);
-    doc.font('Helvetica').fontSize(9);
-    doc.text(`Expediente: ${data.expedienteId || 'N/A'}`, x + 360, y + 10);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, x + 360, y + 40);
-
-    doc.text(`Instalación: ${data.address || ''}`, x + 10, y + 40);
-    doc.text(`Titular: ${data.clientName || ''}`, x + 10, y + 55);
-    doc.text(`Población: ${data.municipality || ''}`, x + 10, y + 70);
-
-    doc.font('Helvetica-Bold').text(`PLANO Nº: ${pageNum} de ${totalPages}`, x + 360, y + 60);
-    doc.fontSize(8).text('Escala: S/E', x + 360, y + 75);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, x + 280, y + 30);
+    doc.font('Helvetica-Bold').text(`PLANO Nº: ${pageNum}/${totalPages}`, x + 280, y + 54);
 
     doc.restore();
 };
@@ -154,108 +107,119 @@ const drawCajetin = (doc: PDFKit.PDFDocument, data: any, pageNum: number, totalP
 
 export const generateUnifilarA3 = async (data: any, outputPath: string) => {
     return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({ autoFirstPage: false, size: 'A3', layout: 'landscape' });
+        const doc = new PDFDocument({ margin: 40, size: 'A3', layout: 'landscape' });
         const stream = fs.createWriteStream(outputPath);
         doc.pipe(stream);
 
-        // Pre-process circuits into pages
-        const allDiffs = data.cuadros?.[0]?.differentials || [];
-        const pages: any[][] = [];
-        let currentPageDiffs: any[] = [];
-        let usedWidth = 0;
-        const MAX_WIDTH = PAGE_WIDTH - LEFT_MARGIN_BINDING - OTHER_MARGINS - 100;
+        const MARGIN = 40;
+        const PAGE_WIDTH = 1190.55;
+        const PAGE_HEIGHT = 841.89;
 
-        allDiffs.forEach((diff: any) => {
-            const numCircs = Math.max(1, diff.circuits?.length || 1);
-            const blockWidth = numCircs * CIRCUIT_WIDTH + BLOCK_GAP;
+        // Y Positions (Classic)
+        const HEADER_Y = 120;
+        const MAIN_BUS_Y = 200;
+        const DIFF_Y = 280;
+        const SUB_BUS_Y = 360;
+        const CIRC_Y = 410;
+        const TEXT_Y = 500;
 
-            if (usedWidth + blockWidth > MAX_WIDTH && currentPageDiffs.length > 0) {
-                pages.push(currentPageDiffs);
-                currentPageDiffs = [];
-                usedWidth = 0;
-            }
-            currentPageDiffs.push(diff);
-            usedWidth += blockWidth;
-        });
-        if (currentPageDiffs.length > 0) pages.push(currentPageDiffs);
+        const CIRCUIT_W = 60;
+        const DIFF_BLOCK_MIN_W = 100;
 
-        // If no pages (no diffs), add one empty
-        if (pages.length === 0) pages.push([]);
+        const mainCuadro = data.cuadros?.[0] || {};
+        const differentials = mainCuadro.differentials || [];
+        const mainBreaker = mainCuadro.mainBreaker || { amperage: 40, poles: 2 };
 
-        // Render Pages
-        pages.forEach((pageDiffs, pIdx) => {
+        let currentPage = 1;
+
+        const drawFrame = (pNum: number) => {
+            doc.lineWidth(1).strokeColor('black').rect(MARGIN, MARGIN, PAGE_WIDTH - 2 * MARGIN, PAGE_HEIGHT - 2 * MARGIN).stroke();
+            // Simple Title Block
+            const bW = 300, bH = 60;
+            const bX = PAGE_WIDTH - MARGIN - bW;
+            const bY = PAGE_HEIGHT - MARGIN - bH;
+            doc.rect(bX, bY, bW, bH).stroke();
+            doc.font('Helvetica-Bold').fontSize(12).text('ESQUEMA UNIFILAR', bX + 10, bY + 10);
+            doc.font('Helvetica').fontSize(8);
+            doc.text(`Expediente: ${data.code || ''}`, bX + 10, bY + 30);
+            doc.text(`Página: ${pNum}`, bX + 240, bY + 45);
+        };
+
+        const drawPage = (diffs: any[], pNum: number) => {
             doc.addPage({ size: 'A3', layout: 'landscape' });
-            drawProfessionalFrame(doc);
-            drawCajetin(doc, data, pIdx + 1, pages.length);
+            drawFrame(pNum);
 
-            let currentX = LEFT_MARGIN_BINDING + 60;
+            let currentX = MARGIN + 100;
 
-            // Page Header (IGA - only on first page or all? Usually all is fine)
-            drawMagnetotermico(doc, currentX, HEADER_Y, 'IGA', data.mainBreaker?.amperage || 40, data.mainBreaker?.poles || 2);
-            drawSurgeProtection(doc, currentX + 60, HEADER_Y);
+            // IGA (Only on page 1)
+            if (pNum === 1) {
+                doc.lineWidth(1).strokeColor('black');
+                doc.moveTo(MARGIN + 40, HEADER_Y).lineTo(currentX, HEADER_Y).stroke();
+                drawMagnetotermico(doc, currentX, HEADER_Y, 'IGA', mainBreaker.amperage, mainBreaker.poles);
+                drawSurgeProtection(doc, currentX + 50, HEADER_Y);
+                doc.lineWidth(2).moveTo(currentX, HEADER_Y + 12).lineTo(currentX, MAIN_BUS_Y).stroke();
+            } else {
+                doc.lineWidth(2).moveTo(MARGIN + 20, MAIN_BUS_Y).lineTo(currentX, MAIN_BUS_Y).stroke();
+            }
 
-            // Connection to Bus
-            doc.lineWidth(1.5).strokeColor('black').moveTo(currentX, HEADER_Y + 15).lineTo(currentX, MAIN_BUS_Y).stroke();
-
-            // Table Header Labels
-            doc.font('Helvetica-Bold').fontSize(8);
-            doc.text('CIRCUITO', LEFT_MARGIN_BINDING + 5, TABLE_START_Y + 10);
-            doc.text('CABLE mm²', LEFT_MARGIN_BINDING + 5, TABLE_START_Y + 40);
-            doc.text('DESTINO', LEFT_MARGIN_BINDING + 5, TABLE_START_Y + 70);
-
-            // Lines
-            doc.lineWidth(1).moveTo(LEFT_MARGIN_BINDING, TABLE_START_Y).lineTo(PAGE_WIDTH - OTHER_MARGINS, TABLE_START_Y).stroke();
-            doc.moveTo(LEFT_MARGIN_BINDING, TABLE_START_Y + 30).lineTo(PAGE_WIDTH - OTHER_MARGINS, TABLE_START_Y + 30).stroke();
-            doc.moveTo(LEFT_MARGIN_BINDING, TABLE_START_Y + 60).lineTo(PAGE_WIDTH - OTHER_MARGINS, TABLE_START_Y + 60).stroke();
-            doc.moveTo(LEFT_MARGIN_BINDING, TABLE_START_Y + 150).lineTo(PAGE_WIDTH - OTHER_MARGINS, TABLE_START_Y + 150).stroke();
-
-            // Draw Diff Blocks
             let busStartX = currentX;
             let busEndX = currentX;
 
-            pageDiffs.forEach((diff, dIdx) => {
-                const numCircs = Math.max(1, diff.circuits?.length || 1);
-                const blockWidth = numCircs * CIRCUIT_WIDTH;
-                const diffCenterX = currentX + (blockWidth / 2);
+            diffs.forEach((diff) => {
+                const circs = diff.circuits || [];
+                const blockW = Math.max(DIFF_BLOCK_MIN_W, circs.length * CIRCUIT_W);
+                const midX = currentX + blockW / 2;
 
-                // Diff
-                doc.lineWidth(1).moveTo(diffCenterX, MAIN_BUS_Y).lineTo(diffCenterX, DIFF_Y).stroke();
-                drawDiferencial(doc, diffCenterX, DIFF_Y, diff.name, diff.amperage, diff.sensitivity);
+                // Drop to Diff
+                doc.lineWidth(1).moveTo(midX, MAIN_BUS_Y).lineTo(midX, DIFF_Y).stroke();
+                drawDiferencial(doc, midX, DIFF_Y, diff.name, diff.amperage, diff.sensitivity);
 
-                // Sub-bus
-                doc.moveTo(diffCenterX, DIFF_Y + 15).lineTo(diffCenterX, SUB_BUS_Y).stroke();
-                const startCX = currentX + (CIRCUIT_WIDTH / 2);
-                const endCX = currentX + (numCircs - 1) * CIRCUIT_WIDTH + (CIRCUIT_WIDTH / 2);
-                doc.lineWidth(2).moveTo(startCX, SUB_BUS_Y).lineTo(endCX, SUB_BUS_Y).stroke();
+                // Diff to Sub-bus
+                doc.moveTo(midX, DIFF_Y + 12).lineTo(midX, SUB_BUS_Y).stroke();
 
-                // Circuits
-                diff.circuits?.forEach((circ: any, cIdx: number) => {
-                    const circX = currentX + cIdx * CIRCUIT_WIDTH + (CIRCUIT_WIDTH / 2);
-                    doc.lineWidth(1).moveTo(circX, SUB_BUS_Y).lineTo(circX, CIRC_Y).stroke();
-                    drawMagnetotermico(doc, circX, CIRC_Y, circ.name, circ.amperage, circ.poles);
+                if (circs.length > 0) {
+                    const firstX = currentX + CIRCUIT_W / 2;
+                    const lastX = currentX + (circs.length - 1) * CIRCUIT_W + CIRCUIT_W / 2;
+                    doc.lineWidth(2).moveTo(firstX, SUB_BUS_Y).lineTo(lastX, SUB_BUS_Y).stroke();
 
-                    // Table Column
-                    const colL = circX - (CIRCUIT_WIDTH / 2);
-                    const colR = circX + (CIRCUIT_WIDTH / 2);
-                    doc.lineWidth(0.5).dash(2, { space: 2 }).moveTo(circX, CIRC_Y + 20).lineTo(circX, TABLE_START_Y).stroke();
-                    doc.undash();
-                    doc.lineWidth(0.5).moveTo(colR, TABLE_START_Y).lineTo(colR, TABLE_START_Y + 150).stroke();
-                    if (dIdx === 0 && cIdx === 0) doc.moveTo(colL, TABLE_START_Y).lineTo(colL, TABLE_START_Y + 150).stroke();
+                    circs.forEach((circ: any, cIdx: number) => {
+                        const cx = currentX + cIdx * CIRCUIT_W + CIRCUIT_W / 2;
+                        doc.lineWidth(1).moveTo(cx, SUB_BUS_Y).lineTo(cx, CIRC_Y).stroke();
+                        drawMagnetotermico(doc, cx, CIRC_Y, circ.name, circ.amperage, circ.poles);
 
-                    // Table Text
-                    doc.fontSize(8).font('Helvetica');
-                    doc.text(circ.name || '', colL, TABLE_START_Y + 10, { width: CIRCUIT_WIDTH, align: 'center' });
-                    doc.text(`${circ.section || ''}`, colL, TABLE_START_Y + 40, { width: CIRCUIT_WIDTH, align: 'center' });
-                    doc.fontSize(7).text(circ.description || '', colL + 2, TABLE_START_Y + 70, { width: CIRCUIT_WIDTH - 4, align: 'center' });
-                });
+                        // Line to text
+                        doc.moveTo(cx, CIRC_Y + 12).lineTo(cx, TEXT_Y - 5).stroke();
+                        doc.font('Helvetica').fontSize(7);
+                        doc.text(circ.description || '', cx - 25, TEXT_Y, { width: 50, align: 'center' });
+                        doc.text(`${circ.section || ''}mm²`, cx - 25, TEXT_Y + 30, { width: 50, align: 'center' });
+                    });
+                }
 
-                currentX += blockWidth + BLOCK_GAP;
-                busEndX = currentX - BLOCK_GAP;
+                currentX += blockW + 20;
+                busEndX = currentX - 20;
             });
 
-            // Main Bus
             doc.lineWidth(2).moveTo(busStartX, MAIN_BUS_Y).lineTo(busEndX, MAIN_BUS_Y).stroke();
+        };
+
+        // Split diffs into pages of ~12 circuits
+        const chunks: any[][] = [];
+        let curr: any[] = [];
+        let cCount = 0;
+        differentials.forEach(d => {
+            const count = (d.circuits || []).length;
+            if (cCount + count > 12 && curr.length > 0) {
+                chunks.push(curr);
+                curr = [];
+                cCount = 0;
+            }
+            curr.push(d);
+            cCount += Math.max(2, count); // count blocks 
         });
+        if (curr.length > 0) chunks.push(curr);
+        if (chunks.length === 0) chunks.push([]);
+
+        chunks.forEach((chunk, i) => drawPage(chunk, i + 1));
 
         doc.end();
         stream.on('finish', () => resolve(outputPath));
