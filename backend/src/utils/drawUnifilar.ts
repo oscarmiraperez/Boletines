@@ -120,7 +120,7 @@ const drawProfessionalFrame = (doc: PDFKit.PDFDocument) => {
 };
 
 const drawCajetin = (doc: PDFKit.PDFDocument, data: any, pageNum: number, totalPages: number) => {
-    const boxW = 500; // ~175mm
+    const boxW = 524; // 185mm (UNE Standard)
     const boxH = 90;
     const x = PAGE_WIDTH - OTHER_MARGINS - boxW;
     const y = PAGE_HEIGHT - OTHER_MARGINS - boxH;
@@ -131,21 +131,21 @@ const drawCajetin = (doc: PDFKit.PDFDocument, data: any, pageNum: number, totalP
 
     // Table lines
     doc.moveTo(x, y + 30).lineTo(x + boxW, y + 30).stroke();
-    doc.moveTo(x + 300, y).lineTo(x + 300, y + 90).stroke();
-    doc.moveTo(x + 300, y + 45).lineTo(x + boxW, y + 45).stroke();
+    doc.moveTo(x + 350, y).lineTo(x + 350, y + 90).stroke(); // Shift vertical separator
+    doc.moveTo(x + 350, y + 45).lineTo(x + boxW, y + 45).stroke();
 
     // Content
     doc.font('Helvetica-Bold').fontSize(14).text('ESQUEMA UNIFILAR (MTD)', x + 10, y + 10);
     doc.font('Helvetica').fontSize(9);
-    doc.text(`Expediente: ${data.expedienteId || 'N/A'}`, x + 310, y + 10);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, x + 310, y + 40);
+    doc.text(`Expediente: ${data.expedienteId || 'N/A'}`, x + 360, y + 10);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, x + 360, y + 40);
 
     doc.text(`Instalación: ${data.address || ''}`, x + 10, y + 40);
     doc.text(`Titular: ${data.clientName || ''}`, x + 10, y + 55);
     doc.text(`Población: ${data.municipality || ''}`, x + 10, y + 70);
 
-    doc.font('Helvetica-Bold').text(`PLANO Nº: ${pageNum} de ${totalPages}`, x + 310, y + 60);
-    doc.fontSize(8).text('Escala: S/E', x + 310, y + 75);
+    doc.font('Helvetica-Bold').text(`PLANO Nº: ${pageNum} de ${totalPages}`, x + 360, y + 60);
+    doc.fontSize(8).text('Escala: S/E', x + 360, y + 75);
 
     doc.restore();
 };

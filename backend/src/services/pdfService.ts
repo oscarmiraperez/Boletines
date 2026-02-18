@@ -136,23 +136,25 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
 
         // Merge Schematic
         if (schematicPdfPath && fs.existsSync(schematicPdfPath)) {
-            // Create a NEW document to avoid messing with the template's internal state too much
-            const finalDoc = await PDFLib.create();
-
-            // Load and copy MTD pages (only first 3, as F3610 is usually 3 pages + blank instructions)
+            // Load the already filled PDF as the BASE document to preserve form fields correctly
             const mtdDoc = await PDFLib.load(filledPdfBytes);
-            const mtdCount = mtdDoc.getPageCount();
-            const pagesToKeep = Math.min(mtdCount, 3); // Official MTD is usually 3 pages
-            const mtdPages = await finalDoc.copyPages(mtdDoc, Array.from({ length: pagesToKeep }, (_, i) => i));
-            mtdPages.forEach(p => finalDoc.addPage(p));
 
-            // Load and copy all schematic pages
+            // Remove any trailing pages from the official MTD (usually only 3 pages are needed)
+            const totalMtdPages = mtdDoc.getPageCount();
+            if (totalMtdPages > 3) {
+                // Delete from last to index 3 (4th page)
+                for (let i = totalMtdPages - 1; i >= 3; i--) {
+                    mtdDoc.removePage(i);
+                }
+            }
+
+            // Load and copy all schematic pages into the MTD document
             const schematicBytes = fs.readFileSync(schematicPdfPath);
             const schematicDoc = await PDFLib.load(schematicBytes);
-            const schematicPages = await finalDoc.copyPages(schematicDoc, schematicDoc.getPageIndices());
-            schematicPages.forEach((page) => finalDoc.addPage(page));
+            const schematicPages = await mtdDoc.copyPages(schematicDoc, schematicDoc.getPageIndices());
+            schematicPages.forEach((page) => mtdDoc.addPage(page));
 
-            const finalBytes = await finalDoc.save();
+            const finalBytes = await mtdDoc.save();
             fs.writeFileSync(outputPath, finalBytes);
 
             // Cleanup temp file
