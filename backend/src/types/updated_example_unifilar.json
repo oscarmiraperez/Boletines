@@ -1,0 +1,113 @@
+{
+  "id": "schematic-123456",
+  "derivacion": {
+    "tension": 230,
+    "seccion": 6,
+    "material": "Cu",
+    "aislamiento": "ES07Z1-K",
+    "texto_nomenclatura": "2x6 mm2 Cu ES07Z1-K AS"
+  },
+  "cuadros": [
+    {
+      "id_cuadro": "cuadro-001",
+      "nombre_cuadro": "Cuadro General de Mando y Protección",
+      "dispositivos": [
+        {
+          "id_dispositivo": "iga-001",
+          "tipo": "magnetotermico",
+          "num_polos": 2,
+          "calibre_A": 40,
+          "sensibilidad_mA": null,
+          "tipo_diferencial": null,
+          "etiqueta_texto": "IGA 2P 40A",
+          "hijos": [
+            {
+              "id_dispositivo": "diff-001",
+              "tipo": "diferencial",
+              "num_polos": 2,
+              "calibre_A": 40,
+              "sensibilidad_mA": 30,
+              "tipo_diferencial": "A",
+              "etiqueta_texto": "ID 2P 40A 30mA A",
+              "hijos": [
+                {
+                  "id_dispositivo": "mag-001",
+                  "tipo": "magnetotermico",
+                  "num_polos": 2,
+                  "calibre_A": 10,
+                  "sensibilidad_mA": null,
+                  "tipo_diferencial": null,
+                  "etiqueta_texto": "PIA 2P 10A",
+                  "hijos": [
+                    {
+                      "id_dispositivo": "final-001",
+                      "tipo": "final_circuito",
+                      "num_polos": 2,
+                      "calibre_A": 10,
+                      "sensibilidad_mA": null,
+                      "tipo_diferencial": null,
+                      "etiqueta_texto": "Alumbrado 1",
+                      "uso_base": "Alumbrado",
+                      "nombre_circuito_final": "Alumbrado 1",
+                      "codigo_circuito": "C1",
+                      "hijos": []
+                    }
+                  ]
+                },
+                {
+                  "id_dispositivo": "mag-002",
+                  "tipo": "magnetotermico",
+                  "num_polos": 2,
+                  "calibre_A": 25,
+                  "sensibilidad_mA": null,
+                  "tipo_diferencial": null,
+                  "etiqueta_texto": "PIA 2P 25A",
+                  "hijos": [
+                    {
+                      "id_dispositivo": "final-002",
+                      "tipo": "final_circuito",
+                      "num_polos": 2,
+                      "calibre_A": 25,
+                      "sensibilidad_mA": null,
+                      "tipo_diferencial": null,
+                      "etiqueta_texto": "Horno 1",
+                      "uso_base": "Horno",
+                      "nombre_circuito_final": "Horno 1",
+                      "codigo_circuito": "C2",
+                      "hijos": []
+                    }
+                  ]
+                },
+                {
+                  "id_dispositivo": "mag-003",
+                  "tipo": "magnetotermico",
+                  "num_polos": 2,
+                  "calibre_A": 16,
+                  "sensibilidad_mA": null,
+                  "tipo_diferencial": null,
+                  "etiqueta_texto": "PIA 2P 16A",
+                  "hijos": [
+                    {
+                      "id_dispositivo": "final-003",
+                      "tipo": "final_circuito",
+                      "num_polos": 2,
+                      "calibre_A": 16,
+                      "sensibilidad_mA": null,
+                      "tipo_diferencial": null,
+                      "etiqueta_texto": "Tomas terrazo",
+                      "uso_base": "Otros",
+                      "nombre_circuito_usuario": "Tomas terrazo",
+                      "nombre_circuito_final": "Tomas terrazo",
+                      "codigo_circuito": "C3",
+                      "hijos": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

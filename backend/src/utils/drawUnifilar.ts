@@ -127,8 +127,67 @@ export const generateUnifilarA3 = async (data: any, outputPath: string) => {
         const DIFF_BLOCK_MIN_W = 100;
 
         const mainCuadro = data.cuadros?.[0] || {};
-        const differentials = mainCuadro.differentials || [];
-        const mainBreaker = mainCuadro.mainBreaker || { amperage: 40, poles: 2 };
+        const derivation = data.derivacion || {};
+
+        // Helper to flatten the tree for the "classic" 3-level drawing logic
+        const flattenToClassic = (roots: any[]) => {
+            const iga = roots.find(d => d.tipo === 'magnetotermico' && d.etiqueta_texto?.toUpperCase().includes('IGA'));
+            const diffs: any[] = [];
+
+            const findDiffs = (nodes: any[]) => {
+                nodes.forEach(node => {
+                    if (node.tipo === 'diferencial') {
+                        // Collect final circuits under this diff
+                        const circuits: any[] = [];
+                        const traverseForFinals = (n: any) => {
+                            if (n.tipo === 'final_circuito') {
+                                // Find parent MT if exists for amperage/poles
+                                // Actually in this tree MT is parent of final
+                                // Let's look up
+                                circuits.push(n);
+                            } else if (n.hijos) {
+                                n.hijos.forEach((h: any) => {
+                                    // Inject parent MT data to final if final is child of MT
+                                    if (n.tipo === 'magnetotermico' && h.tipo === 'final_circuito') {
+                                        h._parentAmperage = n.calibre_A;
+                                        h._parentPoles = n.num_polos;
+                                    }
+                                    traverseForFinals(h);
+                                });
+                            }
+                        };
+                        traverseForFinals(node);
+                        diffs.push({
+                            name: node.etiqueta_texto || 'DIF',
+                            amperage: node.calibre_A || 40,
+                            sensitivity: node.sensibilidad_mA || 30,
+                            circuits: circuits.map(c => ({
+                                name: c.codigo_circuito || '',
+                                description: c.nombre_circuito_final || c.etiqueta_texto || '',
+                                amperage: c._parentAmperage || 16,
+                                poles: c._parentPoles || 2,
+                                section: c.seccion || 2.5 // Fallback
+                            }))
+                        });
+                    } else if (node.hijos) {
+                        findDiffs(node.hijos);
+                    }
+                });
+            };
+
+            findDiffs(roots);
+            return {
+                iga: iga || roots[0], // fallback to first device if no IGA found
+                diffs
+            };
+        };
+
+        const { iga, diffs: flattenedDiffs } = flattenToClassic(mainCuadro.dispositivos || []);
+        const mainBreaker = {
+            amperage: iga?.calibre_A || 40,
+            poles: iga?.num_polos || 2,
+            label: iga?.etiqueta_texto || 'IGA'
+        };
 
         let currentPage = 1;
 
@@ -146,7 +205,9 @@ export const generateUnifilarA3 = async (data: any, outputPath: string) => {
         };
 
         const drawPage = (diffs: any[], pNum: number) => {
-            doc.addPage({ size: 'A3', layout: 'landscape' });
+            if (pNum > 1) {
+                doc.addPage({ size: 'A3', layout: 'landscape' });
+            }
             drawFrame(pNum);
 
             let currentX = MARGIN + 100;
@@ -155,7 +216,16 @@ export const generateUnifilarA3 = async (data: any, outputPath: string) => {
             if (pNum === 1) {
                 doc.lineWidth(1).strokeColor('black');
                 doc.moveTo(MARGIN + 40, HEADER_Y).lineTo(currentX, HEADER_Y).stroke();
-                drawMagnetotermico(doc, currentX, HEADER_Y, 'IGA', mainBreaker.amperage, mainBreaker.poles);
+                drawMagnetotermico(doc, currentX, HEADER_Y, mainBreaker.label, mainBreaker.amperage, mainBreaker.poles);
+
+                // Derivation nomenclature
+                if (derivation.texto_nomenclatura) {
+                    doc.font('Helvetica-Bold').fontSize(9);
+                    doc.text('DERIVACIÓN INDIVIDUAL:', MARGIN + 40, HEADER_Y - 40);
+                    doc.font('Helvetica').fontSize(9);
+                    doc.text(derivation.texto_nomenclatura, MARGIN + 40, HEADER_Y - 28);
+                }
+
                 drawSurgeProtection(doc, currentX + 50, HEADER_Y);
                 doc.lineWidth(2).moveTo(currentX, HEADER_Y + 12).lineTo(currentX, MAIN_BUS_Y).stroke();
             } else {
@@ -206,7 +276,7 @@ export const generateUnifilarA3 = async (data: any, outputPath: string) => {
         const chunks: any[][] = [];
         let curr: any[] = [];
         let cCount = 0;
-        differentials.forEach(d => {
+        flattenedDiffs.forEach(d => {
             const count = (d.circuits || []).length;
             if (cCount + count > 12 && curr.length > 0) {
                 chunks.push(curr);

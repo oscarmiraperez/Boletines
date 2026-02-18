@@ -3,6 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import TechnicalForms from './TechnicalForms';
 import { apiRequest, API_URL } from '../api';
 import { ArrowLeft } from 'lucide-react';
+import {
+    recalcularNumeracionCircuitos,
+    ajustarPolosSegunGeneral,
+    generarTextoNomenclatura,
+    convertFlatToTree,
+    convertTreeToFlat
+} from '../utils/unifilarUtils';
+import { UnifilarSchematic } from '../types/unifilar';
 
 export default function SchematicEditorPage() {
     const { id } = useParams();
@@ -28,6 +36,14 @@ export default function SchematicEditorPage() {
             // Merge top-level fields into the structure TechnicalForms expects
             const technicalData = {
                 ...parsedData, // cuadros, verificaciones, mtdData (internal)
+                id: data.id,
+                derivacion: (parsedData as any).derivacion || {
+                    tension: 230,
+                    seccion: 6,
+                    material: 'Cu',
+                    aislamiento: 'ES07Z1-K',
+                    texto_nomenclatura: '2x6 mm2 Cu ES07Z1-K AS'
+                },
                 installation: { // Mock installation object to populate mtd defaults if needed
                     client: { name: data.client, nif: '' },
                     address: data.address,
@@ -51,39 +67,73 @@ export default function SchematicEditorPage() {
         }
     };
 
-    // @ts-ignore
-    const saveEsquema = async (updates: any) => {
-        // updates might be partial. We need to reconstruct the full payload for the backend.
-        // The backend expects: name, client, address, power, data (stringified)
+    const saveEsquema = async (payload: any, successMessage?: string) => {
+        try {
+            // First, ensure the technicalData is properly typed and calculated
+            const technicalDataToSave = { ...payload.data };
 
-        // We need to keep the current state of "data" (cuadros, etc) and merge updates
-        const currentInternalData = esquema.technicalData; // This has { cuadros, verificaciones, mtdData }
+            // Apply unifilar logic: numbering and poles
+            const wrappedSchematic: UnifilarSchematic = {
+                id: (esquema as any).id,
+                derivacion: technicalDataToSave.derivacion,
+                cuadros: technicalDataToSave.cuadros
+            };
 
-        // If we are saving MTD, we update client/address/power top-level too
-        // let topLevelUpdates = {};
-        let newInternalData = { ...currentInternalData };
+            recalcularNumeracionCircuitos(wrappedSchematic);
+            ajustarPolosSegunGeneral(wrappedSchematic);
 
-        if (updates.type === 'MTD') {
-            const mtd = updates.data;
-            // topLevelUpdates = {
-            //     client: mtd.titularNombre,
-            //     address: mtd.direccion,
-            //     power: mtd.potenciaPrevista
-            // };
-            newInternalData.mtdData = mtd;
-        } else if (updates.type === 'VERIFICACIONES') {
-            newInternalData.verificaciones = updates.data;
-        } else if (updates.type === 'CUADROS_UPDATE') {
-            // updates.data is the full array of cuadros or a specific update?
-            // TechnicalForms usually sends specific updates.
-            // But here we might just save everything to be safe or handle specific actions.
-            // Let's implement specific handlers below and call a generic save
+            // Update the technicalDataToSave with the processed schematic data
+            technicalDataToSave.derivacion = wrappedSchematic.derivacion;
+            technicalDataToSave.cuadros = wrappedSchematic.cuadros;
+
+            const finalPayload = {
+                ...payload, // Keep client, address, power from original payload
+                data: JSON.stringify(technicalDataToSave) // Stringify the technicalData part
+            };
+
+            const data = await apiRequest(`/esquemas/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(finalPayload)
+            });
+
+            // Parse 'data' field which is a JSON string in DB
+            let parsedData = {};
+            try {
+                parsedData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+            } catch (e) {
+                console.error("Error parsing response data JSON", e);
+            }
+
+            const technicalData: any = {
+                ...parsedData,
+                installation: {
+                    client: { name: (data as any).client, nif: '' },
+                    address: (data as any).address,
+                    contractedPower: (data as any).power
+                }
+            };
+
+            if (!technicalData.cuadros) {
+                technicalData.cuadros = [];
+            } else {
+                // Ensure each cuadro has the new dispositivos tree structure if missing,
+                // or keep it if already present. If we have legacy data (mainBreaker/differentials),
+                // we should migrate it to 'dispositivos'.
+                technicalData.cuadros = technicalData.cuadros.map((c: any) => {
+                    if (!c.dispositivos && (c.mainBreaker || c.differentials)) {
+                        return { ...c, dispositivos: convertFlatToTree(c) };
+                    }
+                    return { ...c, dispositivos: c.dispositivos || [] };
+                });
+            }
+
+            setEsquema({ ...data, technicalData });
+            if (successMessage) alert(successMessage);
+        } catch (error) {
+            console.error('Save failed:', error);
+            alert(`Error al guardar: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
-
-        // Generic save function logic
     };
-
-    // Specific Handlers for TechnicalForms
 
     const onSaveMtd = async (mtdData: any) => {
         const payload = {
@@ -95,13 +145,7 @@ export default function SchematicEditorPage() {
                 mtdData
             }
         };
-
-        await apiRequest(`/esquemas/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(payload)
-        });
-        fetchEsquema(); // Reload to sync
-        alert('Datos generales guardados');
+        await saveEsquema(payload, 'Datos generales guardados');
     };
 
     const onSaveVerificaciones = async (verifData: any) => {
@@ -111,11 +155,7 @@ export default function SchematicEditorPage() {
                 verificaciones: verifData
             }
         };
-        await apiRequest(`/esquemas/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(payload)
-        });
-        alert('Verificaciones guardadas');
+        await saveEsquema(payload, 'Verificaciones guardadas');
     };
 
     const onCreateCuadro = async (name: string) => {
@@ -123,11 +163,8 @@ export default function SchematicEditorPage() {
         const newCuadro = {
             id: crypto.randomUUID(),
             name,
-            differentials: [],
-            mainBreaker: { poles: 2, amperage: 40 }
-        }; // Generate ID frontend-side 
-        // Backend independent esquema doesn't have a sub-table for cuadros, it's all JSON.
-        // So we generate ID here.
+            dispositivos: []
+        };
 
         const payload = {
             data: {
@@ -135,9 +172,7 @@ export default function SchematicEditorPage() {
                 cuadros: [...currentCuadros, newCuadro]
             }
         };
-
-        await apiRequest(`/esquemas/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-        fetchEsquema();
+        await saveEsquema(payload);
     };
 
     const onDeleteCuadro = async (cuadroId: string) => {
@@ -150,14 +185,16 @@ export default function SchematicEditorPage() {
                 cuadros: filtered
             }
         };
-        await apiRequest(`/esquemas/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-        fetchEsquema();
+        await saveEsquema(payload, 'Cuadro eliminado');
     };
 
     const onSaveCuadroComponents = async (cuadroId: string, components: any) => {
+        // 'components' comes flat from CuadroModal. Convert to tree.
+        const treeDispositivos = convertFlatToTree(components);
+
         const currentCuadros = esquema.technicalData.cuadros || [];
         const updatedCuadros = currentCuadros.map((c: any) =>
-            c.id === cuadroId ? { ...c, ...components } : c
+            c.id === cuadroId ? { ...c, dispositivos: treeDispositivos } : c
         );
 
         const payload = {
@@ -166,8 +203,21 @@ export default function SchematicEditorPage() {
                 cuadros: updatedCuadros
             }
         };
-        await apiRequest(`/esquemas/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-        fetchEsquema();
+        await saveEsquema(payload, 'Componentes del cuadro guardados');
+    };
+
+    const onUpdateDerivacion = async (derivData: any) => {
+        const nomenclature = generarTextoNomenclatura(derivData);
+        const payload = {
+            data: {
+                ...esquema.technicalData,
+                derivacion: {
+                    ...derivData,
+                    texto_nomenclatura: nomenclature
+                }
+            }
+        };
+        await saveEsquema(payload, 'Datos de derivación actualizados');
     };
 
     const onGenerateSchematic = async () => {
@@ -212,14 +262,22 @@ export default function SchematicEditorPage() {
 
 
             <TechnicalForms
-                standalone={true}
-                initialData={esquema?.technicalData}
+                initialData={{
+                    ...esquema.technicalData,
+                    cuadros: (esquema.technicalData.cuadros || []).map((c: any) => ({
+                        ...c,
+                        // Map tree back to flat for the UI
+                        ...(c.dispositivos ? convertTreeToFlat(c.dispositivos) : {})
+                    }))
+                }}
+                standalone
                 onSaveMtd={onSaveMtd}
                 onSaveVerificaciones={onSaveVerificaciones}
                 onCreateCuadro={onCreateCuadro}
                 onDeleteCuadro={onDeleteCuadro}
                 onSaveCuadroComponents={onSaveCuadroComponents}
                 onGenerateSchematic={onGenerateSchematic}
+                onUpdateDerivacion={onUpdateDerivacion}
             />
         </div >
     );

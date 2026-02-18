@@ -98,7 +98,10 @@ export const updateEsquema = async (req: Request, res: Response) => {
         res.json(updatedEsquema);
     } catch (error) {
         console.error('Error updating esquema:', error);
-        res.status(500).json({ error: 'Error updating esquema' });
+        if (error instanceof Error) {
+            console.error('Stack trace:', error.stack);
+        }
+        res.status(500).json({ error: 'Error updating esquema', details: (error as Error).message });
     }
 };
 
@@ -121,11 +124,12 @@ import { generateSchematicPDF } from '../services/pdfService';
 export const generateEsquemaPDF = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        console.log(`[DEBUG] Generating PDF for Esquema ID: ${id}`);
         const esquema = await prisma.esquema.findUnique({ where: { id } });
 
         if (!esquema) return res.status(404).json({ error: 'Esquema not found' });
 
-        let technicalData = {};
+        let technicalData: any = {};
         try {
             technicalData = typeof esquema.data === 'string' ? JSON.parse(esquema.data) : esquema.data;
         } catch (e) {
@@ -136,26 +140,41 @@ export const generateEsquemaPDF = async (req: Request, res: Response) => {
             clientName: esquema.client || '',
             address: esquema.address || '',
             contractedPower: esquema.power || '',
-            cuadros: (technicalData as any).cuadros || []
+            cuadros: technicalData.cuadros || []
         };
+
+        console.log(`[DEBUG] PDF Data Prepared:`, JSON.stringify(pdfData, null, 2));
 
         const fileName = `esquema-${(esquema.name || 'sin-nombre').replace(/[^a-z0-9]/gi, '_').toLowerCase()}-${id.substring(0, 8)}.pdf`;
         const tempDir = path.join(process.cwd(), 'temp');
         if (!fs.existsSync(tempDir)) {
-            fs.mkdirSync(tempDir);
+            fs.mkdirSync(tempDir, { recursive: true });
         }
         const outputPath = path.join(tempDir, fileName);
 
+        console.log(`[DEBUG] Output Path: ${outputPath}`);
+
         await generateSchematicPDF(pdfData, outputPath);
 
+        if (!fs.existsSync(outputPath)) {
+            throw new Error(`PDF file was not created at ${outputPath}`);
+        }
+
         res.download(outputPath, fileName, (err) => {
-            if (err) console.error('Error downloading PDF:', err);
-            // fs.unlinkSync(outputPath); 
+            if (err) {
+                console.error('Error downloading PDF:', err);
+            } else {
+                console.log(`[DEBUG] PDF Downloaded: ${fileName}`);
+            }
+            // Optional: fs.unlinkSync(outputPath); 
         });
 
     } catch (error) {
         console.error('Error generating PDF:', error);
-        res.status(500).json({ error: 'Error generating PDF' });
+        if (error instanceof Error) {
+            console.error('Stack trace:', error.stack);
+        }
+        res.status(500).json({ error: 'Error generating PDF', details: (error as Error).message });
     }
 };
 

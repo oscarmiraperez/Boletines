@@ -12,7 +12,8 @@ interface TechnicalFormsProps {
     onSaveCuadroComponents?: (id: string, data: any) => Promise<void>;
     onCreateCuadro?: (name: string) => Promise<void>;
     onGenerateSchematic?: () => Promise<void>;
-    standalone?: boolean; // If true, fetched data is handled by parent or different logic
+    onUpdateDerivacion?: (data: any) => Promise<void>;
+    standalone?: boolean;
 }
 
 export default function TechnicalForms({
@@ -23,18 +24,22 @@ export default function TechnicalForms({
     onSaveCuadroComponents: parentSaveCuadroComponents,
     onCreateCuadro: parentCreateCuadro,
     onGenerateSchematic: parentGenerateSchematic,
+    onUpdateDerivacion: parentUpdateDerivacion,
     standalone = false
-}: TechnicalFormsProps = {}) {
+}: TechnicalFormsProps) {
     const { id } = useParams();
     const [loading, setLoading] = useState(!standalone);
 
-    // Medida y Tierra Form
+    // Forms
     const { register: registerMtd, handleSubmit: submitMtd, reset: resetMtd } = useForm();
+    const { register: registerVerif, handleSubmit: submitVerif, reset: resetVerif } = useForm();
+    const { register: registerDeriv, handleSubmit: submitDeriv, reset: resetDeriv } = useForm();
+
     const [activeTab, setActiveTab] = useState(standalone ? 'cuadros' : 'general');
     const [cuadros, setCuadros] = useState<any[]>([]);
-
-    // Verificaciones Form
-    const { register: registerVerif, handleSubmit: submitVerif, reset: resetVerif } = useForm();
+    const [editingCuadro, setEditingCuadro] = useState<any>(null);
+    const [isCreateCuadroOpen, setIsCreateCuadroOpen] = useState(false);
+    const [newCuadroName, setNewCuadroName] = useState('');
 
     useEffect(() => {
         if (standalone && initialData) {
@@ -50,7 +55,6 @@ export default function TechnicalForms({
         if (data.verificaciones) resetVerif(data.verificaciones);
 
         const mtd = data.mtdData || {};
-        // Auto-fill from Installation data if available (only for Expedientes)
         if (!standalone) {
             if (!mtd.titularNombre && data.installation?.client?.name) mtd.titularNombre = data.installation.client.name;
             if (!mtd.titularNif && data.installation?.client?.nif) mtd.titularNif = data.installation.client.nif;
@@ -62,6 +66,7 @@ export default function TechnicalForms({
         if (!mtd.usoInstalacion) mtd.usoInstalacion = 'vivienda';
 
         resetMtd(mtd);
+        if (data.derivacion) resetDeriv(data.derivacion);
     };
 
     const fetchTechnicalData = async () => {
@@ -90,7 +95,6 @@ export default function TechnicalForms({
 
     const onSaveMtd = async (data: any) => {
         if (parentSaveMtd) {
-            // For independent schematics, we might need to sync "general" fields (client, address) with the MTD data
             return parentSaveMtd(data);
         }
         try {
@@ -98,21 +102,24 @@ export default function TechnicalForms({
                 method: 'PUT',
                 body: JSON.stringify({ mtdData: data })
             });
-            alert('Datos de Medida y Tierra guardados');
+            alert('Datos guardados');
         } catch (error) {
             console.error(error);
             alert('Error guardando datos');
         }
     };
 
+    const onUpdateDerivacion = async (data: any) => {
+        if (parentUpdateDerivacion) {
+            return parentUpdateDerivacion(data);
+        }
+        alert('Solo disponible en editor de esquemas');
+    };
+
     const deleteCuadro = async (cuadroId: string) => {
-        if (!confirm('¿Seguro que quieres borrar este cuadro?')) return;
+        if (!confirm('¿Seguro?')) return;
         if (parentDeleteCuadro) {
             await parentDeleteCuadro(cuadroId);
-            // Parent should trigger reload or we update local state?
-            // Ideally parent updates initialData, but here we might need to manually refresh or trust parent.
-            // For standalone, we might simply update local state if it's not server-synced instantly?
-            // Assuming server sync for consistency.
             if (!standalone) fetchTechnicalData();
             return;
         }
@@ -120,11 +127,9 @@ export default function TechnicalForms({
             await apiRequest(`/technical/cuadros/${cuadroId}`, { method: 'DELETE' });
             fetchTechnicalData();
         } catch (error) {
-            alert('Error borrando cuadro');
+            alert('Error');
         }
     };
-
-    const [editingCuadro, setEditingCuadro] = useState<any>(null);
 
     const onSaveCuadroComponents = async (data: any) => {
         if (!editingCuadro) return;
@@ -138,29 +143,23 @@ export default function TechnicalForms({
                 method: 'PUT',
                 body: JSON.stringify(data)
             });
-            alert('Componentes guardados');
+            alert('Guardado');
             setEditingCuadro(null);
             fetchTechnicalData();
         } catch (error) {
-            console.error(error);
-            alert('Error guardando componentes');
+            alert('Error');
         }
     };
-
-    const [isCreateCuadroOpen, setIsCreateCuadroOpen] = useState(false);
-    const [newCuadroName, setNewCuadroName] = useState('');
 
     const handleCreateCuadroSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newCuadroName) return;
-
         if (parentCreateCuadro) {
             await parentCreateCuadro(newCuadroName);
             setIsCreateCuadroOpen(false);
             setNewCuadroName('');
             return;
         }
-
         try {
             await apiRequest(`/technical/expedientes/${id}/cuadros`, {
                 method: 'POST',
@@ -170,21 +169,19 @@ export default function TechnicalForms({
             setIsCreateCuadroOpen(false);
             setNewCuadroName('');
         } catch (e) {
-            alert('Error creando cuadro');
+            alert('Error');
         }
     };
 
     const handleGenerateSchematic = async () => {
-        if (parentGenerateSchematic) {
-            return parentGenerateSchematic();
-        }
+        if (parentGenerateSchematic) return parentGenerateSchematic();
         try {
             const token = localStorage.getItem('token');
             const response = await fetch(`${API_URL}/documents/expedientes/${id}/schematic/generate`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!response.ok) throw new Error('Error generando esquema');
+            if (!response.ok) throw new Error('Error');
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -194,10 +191,9 @@ export default function TechnicalForms({
             a.click();
             window.URL.revokeObjectURL(url);
         } catch (error) {
-            alert('Error al descargar esquema');
+            alert('Error');
         }
     };
-
 
     if (loading) return <div className="text-slate-400">Cargando...</div>;
 
@@ -211,7 +207,7 @@ export default function TechnicalForms({
     ];
 
     const tabs = standalone
-        ? allTabs.filter(t => ['general', 'cuadros'].includes(t.id))
+        ? allTabs.filter(t => ['general', 'cuadros', 'derivacion'].includes(t.id))
         : allTabs;
 
     const inputClasses = "mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950/60 text-slate-50 placeholder:text-slate-500 shadow-sm focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm px-3 py-2.5 transition-all";
@@ -395,41 +391,41 @@ export default function TechnicalForms({
                         <h3 className={sectionTitleClasses}>Derivación Individual</h3>
                         <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6 pl-1">
                             <div className="sm:col-span-2">
-                                <label className={labelClasses}>Material</label>
-                                <select {...registerMtd('diMaterial')} className={inputClasses}>
-                                    <option value="cu">Cobre (Cu)</option>
-                                    <option value="al">Aluminio (Al)</option>
+                                <label className={labelClasses}>Tensión</label>
+                                <select {...registerDeriv('tension', { valueAsNumber: true })} className={inputClasses}>
+                                    <option value={230}>230 V (Monofásico)</option>
+                                    <option value={400}>400 V (Trifásico)</option>
                                 </select>
                             </div>
                             <div className="sm:col-span-2">
                                 <label className={labelClasses}>Sección (mm²)</label>
-                                <input {...registerMtd('diSeccion')} type="number" className={inputClasses} />
+                                <select {...registerDeriv('seccion', { valueAsNumber: true })} className={inputClasses}>
+                                    {[6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 250].map(s => (
+                                        <option key={s} value={s}>{s} mm²</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="sm:col-span-2">
+                                <label className={labelClasses}>Material</label>
+                                <select {...registerDeriv('material')} className={inputClasses}>
+                                    <option value="Cu">Cobre (Cu)</option>
+                                    <option value="Al">Aluminio (Al)</option>
+                                </select>
+                            </div>
+                            <div className="sm:col-span-4">
                                 <label className={labelClasses}>Aislamiento</label>
-                                <select {...registerMtd('diAislamiento')} className={inputClasses}>
-                                    <option value="450/750 V">450/750 V</option>
-                                    <option value="0.6/1 kV">0.6/1 kV</option>
-                                </select>
+                                <input {...registerDeriv('aislamiento')} type="text" className={inputClasses} placeholder="Ej: ES07Z1-K" />
                             </div>
-                            <div className="sm:col-span-3">
-                                <label className={labelClasses}>Instalación</label>
-                                <select {...registerMtd('diInstalacion')} className={inputClasses}>
-                                    <option value="tubo_empotrado">Tubo empotrado</option>
-                                    <option value="tubo_superficie">Tubo superficie</option>
-                                    <option value="canaladura">Canaladura</option>
-                                </select>
-                            </div>
-                            <div className="sm:col-span-2">
-                                <label className={labelClasses}>H.F.</label>
-                                <div className="mt-2 text-slate-300 flex items-center gap-2">
-                                    <input type="checkbox" {...registerMtd('diLibreHalogenos')} className="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-sky-500" />
-                                    <span>Libre Halógenos</span>
+                            <div className="sm:col-span-6">
+                                <label className={labelClasses}>Nomenclatura Generada</label>
+                                <div className="bg-slate-950/40 p-3 rounded-lg border border-slate-800 text-sky-400 font-mono text-sm">
+                                    {initialData?.derivacion?.texto_nomenclatura || 'Pendiente de generar...'}
                                 </div>
+                                <p className="text-[10px] text-slate-500 mt-1 italic">Este texto se actualiza automáticamente al guardar.</p>
                             </div>
                         </div>
                         <div className="mt-6 flex justify-end">
-                            <button onClick={submitMtd(onSaveMtd)} className={buttonPrimary}>Guardar Derivación</button>
+                            <button onClick={submitDeriv(onUpdateDerivacion)} className={buttonPrimary}>Guardar Derivación</button>
                         </div>
                     </div>
                 </div>
