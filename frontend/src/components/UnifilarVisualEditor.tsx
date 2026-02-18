@@ -57,9 +57,9 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
                     const newChild: Device = {
                         id_dispositivo: Math.random().toString(36).substr(2, 9),
                         tipo: type,
-                        num_polos: igaPoles === 2 ? 2 : 2, // Default 2P
-                        calibre_A: 16,
-                        etiqueta_texto: type === 'final_circuito' ? 'C1' : (type === 'magnetotermico' ? 'PIA 2P 16A' : 'ID 2P 40A 30mA AC'),
+                        num_polos: igaPoles === 2 ? 2 : 2,
+                        calibre_A: type === 'diferencial' ? 40 : 16,
+                        etiqueta_texto: '',
                         hijos: []
                     };
                     if (type === 'diferencial') {
@@ -68,6 +68,7 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
                     }
                     if (type === 'final_circuito') {
                         newChild.uso_base = 'Otros';
+                        newChild.nombre_circuito_usuario = '';
                     }
                     actualizarEtiquetaDispositivo(newChild);
                     node.hijos.push(newChild);
@@ -261,6 +262,50 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
                                             <option value="B">B</option>
                                         </select>
                                     </div>
+                                </>
+                            )}
+
+                            {editingDevice.tipo === 'final_circuito' && (
+                                <>
+                                    <div className="col-span-2">
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Uso del Circuito</label>
+                                        <select
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm"
+                                            value={editingDevice.uso_base || 'Otros'}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setEditingDevice({
+                                                    ...editingDevice,
+                                                    uso_base: val as any,
+                                                    nombre_circuito_usuario: val === 'Otros' ? (editingDevice.nombre_circuito_usuario || '') : null
+                                                });
+                                            }}
+                                        >
+                                            <option value="Alumbrado">Alumbrado</option>
+                                            <option value="Emergencias">Emergencias</option>
+                                            <option value="Otros usos">Otros usos</option>
+                                            <option value="Zonas húmedas">Zonas húmedas</option>
+                                            <option value="Horno">Horno</option>
+                                            <option value="Lavadora">Lavadora</option>
+                                            <option value="Lavavajillas">Lavavajillas</option>
+                                            <option value="Termo">Termo</option>
+                                            <option value="Aire acondicionado">Aire acondicionado</option>
+                                            <option value="Otros">Otros</option>
+                                        </select>
+                                    </div>
+                                    {editingDevice.uso_base === 'Otros' && (
+                                        <div className="col-span-2">
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre Personalizado (Obligatorio)</label>
+                                            <input
+                                                type="text"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm"
+                                                placeholder="Ej: Tomas terrazo"
+                                                value={editingDevice.nombre_circuito_usuario || ''}
+                                                onChange={(e) => setEditingDevice({ ...editingDevice, nombre_circuito_usuario: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>

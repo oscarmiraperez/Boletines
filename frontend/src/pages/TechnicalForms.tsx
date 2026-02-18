@@ -207,7 +207,11 @@ export default function TechnicalForms({
     ];
 
     const tabs = standalone
-        ? allTabs.filter(t => ['general', 'cuadros', 'derivacion'].includes(t.id))
+        ? allTabs.filter(t => {
+            const isBoletin = initialData?.origen === 'boletin';
+            if (isBoletin && t.id === 'derivacion') return false;
+            return ['general', 'cuadros', 'derivacion'].includes(t.id);
+        })
         : allTabs;
 
     const inputClasses = "mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950/60 text-slate-50 placeholder:text-slate-500 shadow-sm focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm px-3 py-2.5 transition-all";

@@ -28,10 +28,29 @@ const USOS_CON_NUMERACION: UsoBase[] = [
 ];
 
 /**
+ * Ensures all labels in the schematic are correct.
+ */
+export function refrescarTodasLasEtiquetas(schematic: UnifilarSchematic): void {
+    if (!schematic || !Array.isArray(schematic.cuadros)) return;
+    for (const cuadro of schematic.cuadros) {
+        for (const root of cuadro.dispositivos) {
+            recorrerDispositivos(root, (nodo) => {
+                if (nodo.tipo !== 'final_circuito') {
+                    actualizarEtiquetaDispositivo(nodo);
+                }
+            });
+        }
+    }
+}
+
+/**
  * Recalculates circuit numbering and naming within each board.
  */
 export function recalcularNumeracionCircuitos(schematic: UnifilarSchematic): void {
     if (!schematic || !Array.isArray(schematic.cuadros)) return;
+
+    // First, ensure all MT/ID labels are correct
+    refrescarTodasLasEtiquetas(schematic);
 
     for (const cuadro of schematic.cuadros) {
         const contadoresUso: Record<string, number> = {};
@@ -52,7 +71,6 @@ export function recalcularNumeracionCircuitos(schematic: UnifilarSchematic): voi
 
         for (const fin of finales) {
             const usoBase = fin.uso_base || 'Otros';
-
             contadorCodigo += 1;
             fin.codigo_circuito = "C" + contadorCodigo;
 
@@ -65,11 +83,10 @@ export function recalcularNumeracionCircuitos(schematic: UnifilarSchematic): voi
                 contadoresUso[usoBase] = (contadoresUso[usoBase] || 0) + 1;
                 const indice = contadoresUso[usoBase];
                 fin.nombre_circuito_final = usoBase + " " + indice;
+                fin.nombre_circuito_usuario = null;
             } else {
                 fin.nombre_circuito_final = usoBase;
             }
-
-            // etiqeta_texto should be equal to nombre_circuito_final for finals
             fin.etiqueta_texto = fin.nombre_circuito_final;
         }
     }
@@ -82,9 +99,10 @@ export function ajustarPolosSegunGeneral(schematic: UnifilarSchematic): void {
     if (!schematic || !Array.isArray(schematic.cuadros)) return;
 
     for (const cuadro of schematic.cuadros) {
+        // Encontrar el IGA (Misión 3.1: etiqueta debe empezar por IGA)
         const iga = cuadro.dispositivos.find(d =>
             d.tipo === 'magnetotermico' &&
-            d.etiqueta_texto?.toUpperCase().startsWith('IGA')
+            d.etiqueta_texto?.toUpperCase().includes('IGA')
         );
 
         if (!iga) continue;
@@ -95,7 +113,7 @@ export function ajustarPolosSegunGeneral(schematic: UnifilarSchematic): void {
                 recorrerDispositivos(root, (nodo) => {
                     if (nodo.tipo === 'magnetotermico' || nodo.tipo === 'diferencial') {
                         nodo.num_polos = 2;
-                        // Update etiquetas
+                        // Update etiquetas immediately
                         actualizarEtiquetaDispositivo(nodo);
                     }
                 });
@@ -105,16 +123,18 @@ export function ajustarPolosSegunGeneral(schematic: UnifilarSchematic): void {
 }
 
 /**
- * Updates the etiqueta_texto based on current properties
+ * Updates the etiqueta_texto based on current properties (Misión 3)
  */
 export function actualizarEtiquetaDispositivo(nodo: Device): void {
     if (nodo.tipo === 'magnetotermico') {
-        const type = nodo.etiqueta_texto?.toUpperCase().startsWith('IGA') ? 'IGA' : 'PIA';
-        nodo.etiqueta_texto = `${type} ${nodo.num_polos}P ${nodo.calibre_A}A`;
+        const isIGA = (nodo.etiqueta_texto?.toUpperCase() || '').includes('IGA');
+        const typePrefix = isIGA ? 'IGA' : 'PIA';
+        nodo.etiqueta_texto = `${typePrefix} ${nodo.num_polos}P ${nodo.calibre_A}A`;
     } else if (nodo.tipo === 'diferencial') {
         nodo.etiqueta_texto = `ID ${nodo.num_polos}P ${nodo.calibre_A}A ${nodo.sensibilidad_mA}mA ${nodo.tipo_diferencial || 'AC'}`;
     }
 }
+
 
 /**
  * Generates nomenclature text.

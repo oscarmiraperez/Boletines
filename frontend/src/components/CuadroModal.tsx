@@ -86,8 +86,30 @@ const DifferentialItem = ({
                                     <option value="40">40 A</option>
                                 </select>
                             </div>
-                            <div className="flex-1">
-                                <input {...control.register(`differentials.${index}.circuits.${k}.description`)} placeholder="Uso (Ej: Alumbrado)" className="block w-full border-slate-700 bg-slate-900 text-slate-300 rounded text-xs px-2 py-1.5 placeholder-slate-600 focus:ring-sky-500 focus:border-sky-500" />
+                            <div className="flex-1 space-y-2">
+                                <select
+                                    {...control.register(`differentials.${index}.circuits.${k}.uso_base`)}
+                                    className="block w-full border-slate-700 bg-slate-900 text-slate-300 rounded text-xs py-1.5 focus:ring-sky-500 focus:border-sky-500"
+                                >
+                                    <option value="Alumbrado">Alumbrado</option>
+                                    <option value="Emergencias">Emergencias</option>
+                                    <option value="Otros usos">Otros usos</option>
+                                    <option value="Zonas húmedas">Zonas húmedas</option>
+                                    <option value="Horno">Horno</option>
+                                    <option value="Lavadora">Lavadora</option>
+                                    <option value="Lavavajillas">Lavavajillas</option>
+                                    <option value="Termo">Termo</option>
+                                    <option value="Aire acondicionado">Aire acondicionado</option>
+                                    <option value="Otros">Otros</option>
+                                </select>
+                                {control._formValues.differentials[index]?.circuits[k]?.uso_base === 'Otros' && (
+                                    <input
+                                        {...control.register(`differentials.${index}.circuits.${k}.nombre_circuito_usuario`)}
+                                        placeholder="Nombre (Tomas terrazo)"
+                                        required
+                                        className="block w-full border-slate-700 bg-slate-900 text-slate-300 rounded text-xs px-2 py-1.5 placeholder-slate-600 focus:ring-sky-500 focus:border-sky-500"
+                                    />
+                                )}
                             </div>
                             <button type="button" onClick={() => removeCircuit(k)} className="text-slate-500 hover:text-red-400 transition-colors p-1.5 hover:bg-red-500/10 rounded">×</button>
                         </div>
