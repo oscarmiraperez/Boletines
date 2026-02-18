@@ -30,6 +30,10 @@ import AdminUsers from './pages/AdminUsers';
 import SchematicsList from './pages/SchematicsList';
 import SchematicEditorPage from './pages/SchematicEditorPage';
 
+import ProjectList from './pages/mechanisms/ProjectList';
+import RoomList from './pages/mechanisms/RoomList';
+import MechanismCounter from './pages/mechanisms/MechanismCounter';
+
 function App() {
     return (
         <AuthProvider>
@@ -41,12 +45,16 @@ function App() {
                         <Route index element={<Dashboard />} />
                         <Route path="expedientes/new" element={<ExpedienteWizard />} />
                         <Route path="expedientes/:id" element={<ExpedienteDetail />} />
-                        <Route path="expedientes/:id" element={<ExpedienteDetail />} />
                         <Route path="expedientes/:id/technical" element={<TechnicalForms />} />
 
                         {/* Independent Schematics Routes */}
                         <Route path="esquemas" element={<SchematicsList />} />
                         <Route path="esquemas/:id" element={<SchematicEditorPage />} />
+
+                        {/* Mechanisms Routes */}
+                        <Route path="mecanismos" element={<ProjectList />} />
+                        <Route path="mecanismos/:id" element={<RoomList />} />
+                        <Route path="mecanismos/:projectId/room/:roomId" element={<MechanismCounter />} />
 
                         {/* Admin Routes */}
                         <Route path="admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />

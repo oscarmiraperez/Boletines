@@ -36,6 +36,19 @@ export default function Layout() {
                                 </span>
                             </div>
                         </Link>
+
+                        <div className="h-6 w-px bg-slate-800 mx-1 sm:mx-2"></div>
+
+                        <Link to="/mecanismos" className="flex items-center gap-2 group">
+                            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-amber-500 group-hover:bg-amber-400 transition-colors shadow-lg shadow-amber-900/20">
+                                <span className="text-xs font-bold text-slate-950">MC</span>
+                            </div>
+                            <div className="hidden sm:block">
+                                <span className="block text-sm font-semibold tracking-wide text-slate-200 group-hover:text-white transition-colors">
+                                    Mecanismos
+                                </span>
+                            </div>
+                        </Link>
                     </div>
 
                     <div className="flex items-center gap-3 sm:gap-4">

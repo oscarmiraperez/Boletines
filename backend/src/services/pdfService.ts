@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
 import { PDFDocument as PDFLib } from 'pdf-lib';
+import { generateUnifilarA3 } from '../utils/drawUnifilar';
 
 // Helper to log debug messages to a file
 const logDebug = (message: string) => {
@@ -112,11 +113,18 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
         form.flatten();
         const filledPdfBytes = await pdfDoc.save();
 
-        // If we have a schematic PDF generated separately, merge it
-        if (data.schematicPath && fs.existsSync(data.schematicPath)) {
-            const finalDoc = await PDFLib.load(filledPdfBytes);
+        // Generate Schematic if not provided
+        let schematicPdfPath = data.schematicPath;
+        if (!schematicPdfPath) {
+            const tempSchematicPath = path.join(path.dirname(outputPath), `temp_schematic_${Date.now()}.pdf`);
+            await generateUnifilarA3(data, tempSchematicPath);
+            schematicPdfPath = tempSchematicPath;
+        }
 
-            const schematicBytes = fs.readFileSync(data.schematicPath);
+        // Merge Schematic
+        if (schematicPdfPath && fs.existsSync(schematicPdfPath)) {
+            const finalDoc = await PDFLib.load(filledPdfBytes);
+            const schematicBytes = fs.readFileSync(schematicPdfPath);
             const schematicDoc = await PDFLib.load(schematicBytes);
 
             const schematicPages = await finalDoc.copyPages(schematicDoc, schematicDoc.getPageIndices());
@@ -124,6 +132,11 @@ export const fillOfficialMTD = async (templatePath: string, data: any, outputPat
 
             const finalBytes = await finalDoc.save();
             fs.writeFileSync(outputPath, finalBytes);
+
+            // Cleanup temp file
+            if (schematicPdfPath.includes('temp_schematic')) {
+                fs.unlinkSync(schematicPdfPath);
+            }
         } else {
             fs.writeFileSync(outputPath, filledPdfBytes);
         }
@@ -484,6 +497,103 @@ export const generateAuthorizationPDF = async (data: any, outputPath: string) =>
             doc.addPage();
             doc.image(data.dniPath, { fit: [500, 400], align: 'center' });
         }
+
+        doc.end();
+        stream.on('finish', () => resolve(outputPath));
+        stream.on('error', reject);
+    });
+};
+// --- MECHANISM PDF GENERATION ---
+
+export const generateMechanismPDF = async (project: any, outputPath: string) => {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const stream = fs.createWriteStream(outputPath);
+
+        doc.pipe(stream);
+
+        // --- Helper: Draw Table Row ---
+        const drawRow = (y: number, col1: string, col2: string, isHeader: boolean = false) => {
+            doc.font(isHeader ? 'Helvetica-Bold' : 'Helvetica').fontSize(10);
+            doc.text(col1, 50, y, { width: 300 });
+            doc.text(col2, 350, y, { width: 100, align: 'right' });
+
+            // Underline
+            doc.lineWidth(0.5).moveTo(50, y + 15).lineTo(500, y + 15).strokeColor(isHeader ? 'black' : '#cccccc').stroke();
+        };
+
+        // --- 1. HEADER ---
+        doc.font('Helvetica-Bold').fontSize(18).text(project.name, { align: 'center' });
+        if (project.description) {
+            doc.font('Helvetica').fontSize(12).text(project.description, { align: 'center' });
+        }
+        doc.moveDown(2);
+
+        // --- 2. SUMMARY SECTION ---
+        doc.font('Helvetica-Bold').fontSize(14).text('RESUMEN DE MATERIALES', { underline: true });
+        doc.moveDown(1);
+
+        // Calculate Totals
+        const totals: Record<string, number> = {};
+        project.rooms.forEach((room: any) => {
+            room.items.forEach((item: any) => {
+                if (item.quantity > 0) {
+                    totals[item.name] = (totals[item.name] || 0) + item.quantity;
+                }
+            });
+        });
+
+        // Filter and Sort Totals
+        // Sort by name for now, or use a predefined order if requested (but name is fine)
+        const sortedKeys = Object.keys(totals).sort();
+
+        let currentY = doc.y;
+
+        // Table Header
+        drawRow(currentY, 'Concepto', 'Cantidad', true);
+        currentY += 25;
+
+        sortedKeys.forEach(key => {
+            if (currentY > 750) { // Page Break check
+                doc.addPage();
+                currentY = 50;
+                drawRow(currentY, 'Concepto', 'Cantidad', true);
+                currentY += 25;
+            }
+            drawRow(currentY, key, totals[key].toString());
+            currentY += 20;
+        });
+
+        // --- 3. DETAILED SECTION (Room by Room) ---
+        doc.addPage();
+        doc.font('Helvetica-Bold').fontSize(14).text('DETALLE POR ESTANCIA', { underline: true });
+        doc.moveDown(2);
+
+        project.rooms.forEach((room: any) => {
+            // Check if room has items
+            const roomItems = room.items.filter((i: any) => i.quantity > 0);
+            if (roomItems.length === 0) return;
+
+            // Check space
+            if (doc.y > 650) doc.addPage();
+
+            // Room Header
+            doc.font('Helvetica-Bold').fontSize(12).fillColor('#f59e0b').text(room.name);
+            doc.fillColor('black');
+            doc.moveDown(0.5);
+
+            // Room Items
+            roomItems.forEach((item: any) => {
+                if (doc.y > 750) doc.addPage();
+
+                doc.font('Helvetica').fontSize(10);
+                // Bullet point style
+                doc.text(`• ${item.name}: `, { continued: true });
+                doc.font('Helvetica-Bold').text(`${item.quantity}`);
+            });
+
+            doc.moveDown(1.5);
+        });
 
         doc.end();
         stream.on('finish', () => resolve(outputPath));

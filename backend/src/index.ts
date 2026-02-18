@@ -51,6 +51,7 @@ import technicalRoutes from './routes/technicalRoutes';
 import documentRoutes from './routes/documentRoutes';
 import esquemaRoutes from './routes/esquemaRoutes';
 import adminRoutes from './routes/adminRoutes';
+import mechanismRoutes from './routes/mechanismRoutes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -59,6 +60,7 @@ app.use('/api/technical', technicalRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/esquemas', esquemaRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/mechanisms', mechanismRoutes);
 
 // Basic health check route
 app.get('/api/health', (req: Request, res: Response) => {
