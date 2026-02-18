@@ -8,16 +8,17 @@ const PAGE_HEIGHT = 841.89;
 const CONTENT_WIDTH = PAGE_WIDTH - (MARGIN * 2);
 
 // Y Positions
-const HEADER_Y = 150;      // Origin/IGA height
-const MAIN_BUS_Y = 250;    // Main Horizontal Bus
-const DIFF_Y = 300;        // Differentials
-const SUB_BUS_Y = 400;     // Sub-buses for circuits
-const CIRC_Y = 450;        // Circuits (Breakers)
-const CIRC_TEXT_Y = 520;   // Circuit Descriptions
+const HEADER_Y = 100;      // Origin/IGA height
+const MAIN_BUS_Y = 200;    // Main Horizontal Bus
+const DIFF_Y = 280;        // Differentials
+const SUB_BUS_Y = 380;     // Sub-buses for circuits
+const CIRC_Y = 430;        // Circuits (Breakers)
+const TABLE_START_Y = 550; // Start of the data table
+const TABLE_HEIGHT = 150;  // Height of the table
 
 // Spacing
-const CIRCUIT_SPACING = 60;
-const MIN_DIFF_SPACING = 100;
+const CIRCUIT_SPACING = 50;
+const MIN_DIFF_SPACING = 80;
 
 // --- SYMBOL DRAWING HELPERS ---
 
@@ -27,7 +28,7 @@ const drawSymbolText = (doc: PDFKit.PDFDocument, text: string, x: number, y: num
     if (rotate) {
         doc.translate(x, y);
         doc.rotate(-90);
-        doc.text(text, 0, 0, { align: 'left' }); // Rotated text usually aligns left from the point
+        doc.text(text, 0, 0, { align: 'left' });
     } else {
         doc.text(text, x - 20, y, { width: 40, align });
     }
@@ -37,35 +38,7 @@ const drawSymbolText = (doc: PDFKit.PDFDocument, text: string, x: number, y: num
 const drawMagnetotermico = (doc: PDFKit.PDFDocument, x: number, y: number, label: string, amperage: number, poles: number, pdc: string = '6kA') => {
     doc.save();
     doc.translate(x, y);
-    doc.lineWidth(1).strokeColor('red'); // User requested style (Red symbols seen in images)
-
-    // Line In
-    doc.moveTo(0, -10).lineTo(0, -5).stroke();
-
-    // Switch Blade (Open)
-    doc.moveTo(0, -5).lineTo(8, -15).stroke(); // Blade angled up/right to indicate open? Or standard closed? 
-    // Standard unifilar usually shows CLOSED or OPEN. Let's stick to the subtle angled line of the previous implementation but refined.
-    // Actually, IEC symbol: Line fits into a circle? No.
-    // Let's copy the visual from Image 1: Line vertical. Small diagonal cross for mechanism.
-
-    // Vertical Line (closed state representation for diagram)
-    // doc.moveTo(0, -5).lineTo(0, 5).stroke();
-
-    // Mechanism: "X" on the line
-    doc.moveTo(-3, -3).lineTo(3, 3).stroke();
-    doc.moveTo(3, -3).lineTo(-3, 3).stroke();
-
-    // Thermal (Square)
-    doc.rect(-4, 3, 8, 8).stroke();
-
-    // Magnetic (Semi-circle on top of square? or inside?)
-    // Reference Image 1: It's small. 
-    // Let's stick to the previous implementation which was clean: Switch blade + X + Square.
-
-    // Re-doing strictly:
-    doc.strokeColor('black'); // Back to black by default unless specified, but user images were red.
-    // Let's use Red for the symbol to match the "Reference" they liked.
-    doc.strokeColor('#cc0000');
+    doc.lineWidth(1).strokeColor('black'); // STRICTLY BLACK
 
     // Line In
     doc.moveTo(0, -15).lineTo(0, -5).stroke();
@@ -79,13 +52,7 @@ const drawMagnetotermico = (doc: PDFKit.PDFDocument, x: number, y: number, label
     doc.moveTo(5, -2).lineTo(1, 2).stroke();
 
     // Thermal/Magnetic Box
-    // doc.rect(2, -6, 6, 6).stroke(); // Replaced with separate triggers if needed, but box is common
-
-    // Proper IEC:
-    // Thermal: Semi-circle
-    // Magnetic: 
-    // Let's keep it simple: "PIA" symbol.
-    doc.rect(-3, -3, 6, 6).stroke(); // Small box on the line?
+    doc.rect(-3, -3, 6, 6).stroke();
 
     doc.restore();
 
@@ -99,21 +66,18 @@ const drawMagnetotermico = (doc: PDFKit.PDFDocument, x: number, y: number, label
 const drawDiferencial = (doc: PDFKit.PDFDocument, x: number, y: number, label: string, amperage: number, sensitivity: number, poles: number) => {
     doc.save();
     doc.translate(x, y);
-    doc.strokeColor('#cc0000');
+    doc.strokeColor('black'); // STRICTLY BLACK
     doc.lineWidth(1);
 
     // Line In/Out
     doc.moveTo(0, -15).lineTo(0, 15).stroke();
-
-    // Switch Blade
-    // doc.moveTo(0, -5).lineTo(8, -15).stroke(); // Open style
 
     // Toroid (Oval)
     doc.ellipse(0, 0, 10, 5).stroke();
 
     // Trip Linkage (Dashed line from oval to switch)
     doc.dash(1, { space: 1 });
-    doc.moveTo(0, -5).lineTo(2, -10).stroke(); // Visual indication
+    doc.moveTo(0, -5).lineTo(2, -10).stroke();
     doc.undash();
 
     doc.restore();
@@ -128,7 +92,7 @@ const drawDiferencial = (doc: PDFKit.PDFDocument, x: number, y: number, label: s
 const drawSurgeProtection = (doc: PDFKit.PDFDocument, x: number, y: number) => {
     doc.save();
     doc.translate(x, y);
-    doc.strokeColor('#cc0000');
+    doc.strokeColor('black'); // STRICTLY BLACK
 
     // Line from bus
     doc.moveTo(0, -15).lineTo(0, 0).stroke();
@@ -136,8 +100,7 @@ const drawSurgeProtection = (doc: PDFKit.PDFDocument, x: number, y: number) => {
     // Box
     doc.rect(-8, 0, 16, 16).stroke();
 
-    // Varistor spacing
-    // Ground connection
+    // Varistor spacing & Ground
     doc.moveTo(0, 16).lineTo(0, 24).stroke();
     // Ground symbol
     doc.moveTo(-6, 24).lineTo(6, 24).stroke();
@@ -182,10 +145,27 @@ export const generateUnifilarA3 = async (data: any, outputPath: string) => {
         doc.lineWidth(2).strokeColor('black');
         doc.moveTo(currentX, HEADER_Y + 15).lineTo(currentX, MAIN_BUS_Y).stroke();
 
-        // Recursively draw differentials and circuits
-        // ... (Logic from pdfService adapted here)
+        // --- TABLE STRUCTURE ---
+        // Draw Table Header Labels
+        const ROW_H = 30;
+        const ROW_1_Y = TABLE_START_Y;
+        const ROW_2_Y = TABLE_START_Y + ROW_H;
+        const ROW_3_Y = TABLE_START_Y + (ROW_H * 2);
 
-        // Simplified loop for now to verify integration
+        // Labels Column
+        doc.font('Helvetica-Bold').fontSize(8);
+        doc.text('CIRCUITO', MARGIN + 5, ROW_1_Y + 10);
+        doc.text('CABLE mm²', MARGIN + 5, ROW_2_Y + 10);
+        doc.text('DESTINO', MARGIN + 5, ROW_3_Y + 10);
+
+        // Horizontal Table Lines
+        doc.lineWidth(1).strokeColor('black');
+        doc.moveTo(MARGIN, TABLE_START_Y).lineTo(PAGE_WIDTH - MARGIN, TABLE_START_Y).stroke();
+        doc.moveTo(MARGIN, ROW_2_Y).lineTo(PAGE_WIDTH - MARGIN, ROW_2_Y).stroke();
+        doc.moveTo(MARGIN, ROW_3_Y).lineTo(PAGE_WIDTH - MARGIN, ROW_3_Y).stroke();
+        doc.moveTo(MARGIN, ROW_3_Y + 80).lineTo(PAGE_WIDTH - MARGIN, ROW_3_Y + 80).stroke(); // Bottom of table
+
+        // --- CIRCUITS LOOP ---
         const differentials = data.cuadros?.[0]?.differentials || [];
         let busStartX = currentX;
         let busEndX = currentX;
@@ -195,35 +175,51 @@ export const generateUnifilarA3 = async (data: any, outputPath: string) => {
             const blockSize = numCircs * CIRCUIT_SPACING;
             const diffCenterX = currentX + (blockSize / 2);
 
-            // Diff
+            // Diff Symbol & Line
             doc.lineWidth(1).strokeColor('black');
             doc.moveTo(diffCenterX, MAIN_BUS_Y).lineTo(diffCenterX, DIFF_Y).stroke();
             drawDiferencial(doc, diffCenterX, DIFF_Y, diff.name, diff.amperage, diff.sensitivity, 2);
 
-            // Sub Bus
+            // Sub Bus Line
             doc.moveTo(diffCenterX, DIFF_Y + 15).lineTo(diffCenterX, SUB_BUS_Y).stroke();
-
-            // Circuits
             const startCircX = currentX + (CIRCUIT_SPACING / 2);
             const endCircX = currentX + ((numCircs - 1) * CIRCUIT_SPACING) + (CIRCUIT_SPACING / 2);
             doc.lineWidth(2).strokeColor('black').moveTo(startCircX, SUB_BUS_Y).lineTo(endCircX, SUB_BUS_Y).stroke();
 
+            // Circuits
             diff.circuits?.forEach((circ: any, cIdx: number) => {
                 const circX = currentX + (cIdx * CIRCUIT_SPACING) + (CIRCUIT_SPACING / 2);
+
+                // Draw Breaker
                 doc.lineWidth(1).strokeColor('black').moveTo(circX, SUB_BUS_Y).lineTo(circX, CIRC_Y).stroke();
                 drawMagnetotermico(doc, circX, CIRC_Y, circ.name, circ.amperage, circ.poles);
 
-                // Vertical Text Desc
-                doc.save();
-                doc.translate(circX, CIRC_TEXT_Y);
-                doc.rotate(-90);
-                doc.font('Helvetica').fontSize(7).fillColor('black');
-                doc.text(`${circ.description} (${circ.section}mm²)`, 0, 0);
-                doc.restore();
+                // Line down to Table
+                doc.lineWidth(0.5).dash(2, { space: 2 }).moveTo(circX, CIRC_Y + 20).lineTo(circX, TABLE_START_Y).stroke();
+                doc.undash();
+
+                // Draw Table Vertical Separators
+                const colLeft = circX - (CIRCUIT_SPACING / 2);
+                const colRight = circX + (CIRCUIT_SPACING / 2);
+                doc.lineWidth(0.5).strokeColor('black');
+                doc.moveTo(colRight, TABLE_START_Y).lineTo(colRight, ROW_3_Y + 80).stroke();
+                if (cIdx === 0 && idx === 0) { // First line
+                    doc.moveTo(colLeft, TABLE_START_Y).lineTo(colLeft, ROW_3_Y + 80).stroke();
+                }
+
+                // Fill Table Data
+                doc.font('Helvetica').fontSize(8).fillColor('black');
+                // Circuit Name
+                doc.text(circ.name || `C${cIdx + 1}`, colLeft, ROW_1_Y + 10, { width: CIRCUIT_SPACING, align: 'center' });
+                // Cable Section
+                doc.text(`${circ.section}`, colLeft, ROW_2_Y + 10, { width: CIRCUIT_SPACING, align: 'center' });
+                // Destination (Multiline)
+                doc.fontSize(7);
+                doc.text(circ.description || '', colLeft + 2, ROW_3_Y + 5, { width: CIRCUIT_SPACING - 4, align: 'center', height: 75 });
             });
 
-            currentX += blockSize + 20; // Spacing between diff blocks
-            busEndX = currentX - 20;
+            currentX += blockSize + 10; // Spacing between diff blocks
+            busEndX = currentX - 10;
         });
 
         // Main Bus Draw
