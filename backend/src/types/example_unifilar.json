@@ -9,11 +9,11 @@
     },
     "cuadros": [
         {
-            "id_cuadro": "cuadro-001",
-            "nombre_cuadro": "Cuadro General de Mando y Protección",
+            "id": "cuadro-001",
+            "name": "Cuadro General de Mando y Protección",
             "dispositivos": [
                 {
-                    "id_dispositivo": "iga-001",
+                    "id": "iga-001",
                     "tipo": "magnetotermico",
                     "num_polos": 2,
                     "calibre_A": 40,
@@ -22,7 +22,7 @@
                     "etiqueta_texto": "IGA 2P 40A",
                     "hijos": [
                         {
-                            "id_dispositivo": "diff-001",
+                            "id": "diff-001",
                             "tipo": "diferencial",
                             "num_polos": 2,
                             "calibre_A": 40,
@@ -31,7 +31,7 @@
                             "etiqueta_texto": "ID 2P 40A 30mA A",
                             "hijos": [
                                 {
-                                    "id_dispositivo": "mag-001",
+                                    "id": "mag-001",
                                     "tipo": "magnetotermico",
                                     "num_polos": 2,
                                     "calibre_A": 10,
@@ -40,7 +40,7 @@
                                     "etiqueta_texto": "PIA 2P 10A",
                                     "hijos": [
                                         {
-                                            "id_dispositivo": "final-001",
+                                            "id": "final-001",
                                             "tipo": "final_circuito",
                                             "num_polos": 2,
                                             "calibre_A": 10,
@@ -55,7 +55,7 @@
                                     ]
                                 },
                                 {
-                                    "id_dispositivo": "mag-002",
+                                    "id": "mag-002",
                                     "tipo": "magnetotermico",
                                     "num_polos": 2,
                                     "calibre_A": 25,
@@ -64,7 +64,7 @@
                                     "etiqueta_texto": "PIA 2P 25A",
                                     "hijos": [
                                         {
-                                            "id_dispositivo": "final-002",
+                                            "id": "final-002",
                                             "tipo": "final_circuito",
                                             "num_polos": 2,
                                             "calibre_A": 25,
@@ -79,7 +79,7 @@
                                     ]
                                 },
                                 {
-                                    "id_dispositivo": "mag-003",
+                                    "id": "mag-003",
                                     "tipo": "magnetotermico",
                                     "num_polos": 2,
                                     "calibre_A": 16,
@@ -88,7 +88,7 @@
                                     "etiqueta_texto": "PIA 2P 16A",
                                     "hijos": [
                                         {
-                                            "id_dispositivo": "final-003",
+                                            "id": "final-003",
                                             "tipo": "final_circuito",
                                             "num_polos": 2,
                                             "calibre_A": 16,

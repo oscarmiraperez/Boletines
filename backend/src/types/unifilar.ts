@@ -19,7 +19,7 @@ export type UsoBase =
     | 'Otros';
 
 export interface Device {
-    id_dispositivo: string;
+    id: string;
     tipo: DeviceType;
     num_polos: number | null;
     calibre_A: number | null;
@@ -37,8 +37,8 @@ export interface Device {
 }
 
 export interface Cuadro {
-    id_cuadro: string;
-    nombre_cuadro: string;
+    id: string;
+    name: string;
     dispositivos: Device[]; // Root devices in the tree
 }
 
