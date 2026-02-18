@@ -23,6 +23,44 @@ model User {
 
   expedientesOperador Expediente[] @relation("OperadorExpediente")
   expedientesTecnico  Expediente[] @relation("TecnicoExpediente")
+  mechanismProjects   MechanismProject[]
+}
+
+
+// --- MECHANISMS FEATURE ---
+
+model MechanismProject {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  date        DateTime @default(now())
+  
+  rooms       MechanismRoom[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MechanismRoom {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     MechanismProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  
+  items       MechanismItem[]
+}
+
+model MechanismItem {
+  id          String   @id @default(uuid())
+  roomId      String
+  room        MechanismRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  name        String
+  quantity    Int    @default(0)
+  
+  @@unique([roomId, name])
 }
 
 model Client {
