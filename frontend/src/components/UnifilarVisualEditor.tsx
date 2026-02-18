@@ -53,9 +53,9 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
         const newDispositivos = [...dispositivos];
         const addChildRecursive = (nodes: Device[]): boolean => {
             for (const node of nodes) {
-                if (node.id_dispositivo === parentId) {
+                if (node.id === parentId) {
                     const newChild: Device = {
-                        id_dispositivo: Math.random().toString(36).substr(2, 9),
+                        id: Math.random().toString(36).substr(2, 9),
                         tipo: type,
                         num_polos: igaPoles === 2 ? 2 : 2,
                         calibre_A: type === 'diferencial' ? 40 : 16,
@@ -84,10 +84,10 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
     };
 
     const handleDelete = (id: string) => {
-        const newDispositivos = dispositivos.filter(d => d.id_dispositivo !== id);
+        const newDispositivos = dispositivos.filter(d => d.id !== id);
         const deleteRecursive = (nodes: Device[]) => {
             for (const node of nodes) {
-                node.hijos = node.hijos.filter(h => h.id_dispositivo !== id);
+                node.hijos = node.hijos.filter(h => h.id !== id);
                 deleteRecursive(node.hijos);
             }
         };
@@ -102,7 +102,7 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
         const newDispositivos = [...dispositivos];
         const updateRecursive = (nodes: Device[]) => {
             for (let i = 0; i < nodes.length; i++) {
-                if (nodes[i].id_dispositivo === updated.id_dispositivo) {
+                if (nodes[i].id === updated.id) {
                     nodes[i] = { ...updated };
                     actualizarEtiquetaDispositivo(nodes[i]);
                     return true;
@@ -117,12 +117,12 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
     };
 
     const renderNode = (node: Device, x: number, y: number, level: number) => {
-        const isSelected = selectedId === node.id_dispositivo;
+        const isSelected = selectedId === node.id;
         const isIGA = node.etiqueta_texto?.toUpperCase().includes('IGA');
 
         return (
             <div
-                key={node.id_dispositivo}
+                key={node.id}
                 className="absolute flex flex-col items-center group transition-all"
                 style={{ left: x, top: y, width: SYMBOL_SIZE }}
             >
@@ -133,12 +133,12 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
                 <div
                     className={`relative p-2 rounded-lg cursor-pointer transition-all ${isSelected ? 'ring-2 ring-sky-500 bg-sky-500/10' : 'hover:bg-slate-100'}`}
                     onClick={() => {
-                        setSelectedId(node.id_dispositivo);
+                        setSelectedId(node.id);
                         setEditingDevice(node);
                     }}
                     onContextMenu={(e) => {
                         e.preventDefault();
-                        handleLongPress(node.id_dispositivo);
+                        handleLongPress(node.id);
                     }}
                 >
                     {node.tipo === 'magnetotermico' && <MagnetotermicoSymbol />}
@@ -151,24 +151,24 @@ export default function UnifilarVisualEditor({ dispositivos, onUpdate, igaPoles 
                 </div>
 
                 {/* Long-press Menu */}
-                {menuId === node.id_dispositivo && (
+                {menuId === node.id && (
                     <div className="absolute z-20 top-full mt-2 bg-slate-900 border border-slate-800 rounded-lg shadow-xl p-1 min-w-[160px] animate-in slide-in-from-top-2">
                         {node.tipo !== 'final_circuito' && (
                             <>
-                                <button onClick={() => handleAddChild(node.id_dispositivo, 'magnetotermico')} className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-md">
+                                <button onClick={() => handleAddChild(node.id, 'magnetotermico')} className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-md">
                                     + Magnetotérmico
                                 </button>
-                                <button onClick={() => handleAddChild(node.id_dispositivo, 'diferencial')} className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-md">
+                                <button onClick={() => handleAddChild(node.id, 'diferencial')} className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-md">
                                     + Diferencial
                                 </button>
-                                <button onClick={() => handleAddChild(node.id_dispositivo, 'final_circuito')} className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-md">
+                                <button onClick={() => handleAddChild(node.id, 'final_circuito')} className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-md">
                                     Terminar Circuito
                                 </button>
                                 <div className="h-px bg-slate-800 my-1"></div>
                             </>
                         )}
                         {!isIGA && (
-                            <button onClick={() => handleDelete(node.id_dispositivo)} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-400/10 rounded-md">
+                            <button onClick={() => handleDelete(node.id)} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-400/10 rounded-md">
                                 Eliminar
                             </button>
                         )}

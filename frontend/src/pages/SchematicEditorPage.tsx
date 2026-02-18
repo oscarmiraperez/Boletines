@@ -10,7 +10,7 @@ import {
     convertFlatToTree,
     convertTreeToFlat
 } from '../utils/unifilarUtils';
-import { UnifilarSchematic, Device } from '../types/unifilar';
+import { UnifilarSchematic } from '../types/unifilar';
 
 export default function SchematicEditorPage() {
     const { id } = useParams();

@@ -158,7 +158,7 @@ export function convertFlatToTree(cuadro: any): Device[] {
     // IGA (Main Breaker)
     if (cuadro.mainBreaker) {
         const iga: Device = {
-            id_dispositivo: `iga-${Math.random().toString(36).substr(2, 9)}`,
+            id: `iga-${Math.random().toString(36).substr(2, 9)}`,
             tipo: 'magnetotermico',
             num_polos: cuadro.mainBreaker.poles,
             calibre_A: cuadro.mainBreaker.amperage,
@@ -167,46 +167,79 @@ export function convertFlatToTree(cuadro: any): Device[] {
         };
         dispositivos.push(iga);
 
-        // All differentials go under IGA (or at root if no IGA)
+        // All components (ID or standalone PIA) go under IGA
         const parent = iga;
+        const rawComponents = cuadro.components || cuadro.differentials || [];
 
-        (cuadro.differentials || []).forEach((diff: any) => {
-            const dNode: Device = {
-                id_dispositivo: `dif-${Math.random().toString(36).substr(2, 9)}`,
-                tipo: 'diferencial',
-                num_polos: diff.poles,
-                calibre_A: diff.amperage,
-                sensibilidad_mA: diff.sensitivity,
-                tipo_diferencial: diff.type || 'AC',
-                etiqueta_texto: `ID ${diff.poles}P ${diff.amperage}A ${diff.sensitivity}mA ${diff.type || 'AC'}`,
-                hijos: []
-            };
-            parent.hijos.push(dNode);
+        rawComponents.forEach((comp: any) => {
+            // Determine type: if it has 'tipo' property or if it comes from 'differentials' array
+            const isID = comp.tipo === 'ID' || (!comp.tipo && comp.circuits);
 
-            (diff.circuits || []).forEach((circ: any) => {
-                const mtNode: Device = {
-                    id_dispositivo: `mt-${Math.random().toString(36).substr(2, 9)}`,
-                    tipo: 'magnetotermico',
-                    num_polos: circ.poles,
-                    calibre_A: circ.amperage,
-                    etiqueta_texto: `PIA ${circ.poles}P ${circ.amperage}A`,
+            if (isID) {
+                // Differential (ID)
+                const dNode: Device = {
+                    id: `dif-${Math.random().toString(36).substr(2, 9)}`,
+                    tipo: 'diferencial',
+                    num_polos: comp.poles || 2,
+                    calibre_A: comp.amperage || 40,
+                    sensibilidad_mA: comp.sensitivity || 30,
+                    tipo_diferencial: comp.type_id || comp.type || 'AC',
+                    etiqueta_texto: `ID ${comp.poles || 2}P ${comp.amperage || 40}A ${comp.sensitivity || 30}mA ${comp.type_id || comp.type || 'AC'}`,
                     hijos: []
                 };
-                dNode.hijos.push(mtNode);
+                parent.hijos.push(dNode);
+
+                (comp.circuits || []).forEach((circ: any) => {
+                    const mtNode: Device = {
+                        id: `mt-${Math.random().toString(36).substr(2, 9)}`,
+                        tipo: 'magnetotermico',
+                        num_polos: circ.poles || 2,
+                        calibre_A: circ.amperage || 16,
+                        etiqueta_texto: `PIA ${circ.poles || 2}P ${circ.amperage || 16}A`,
+                        hijos: []
+                    };
+                    dNode.hijos.push(mtNode);
+
+                    const finalNode: Device = {
+                        id: `final-${Math.random().toString(36).substr(2, 9)}`,
+                        tipo: 'final_circuito',
+                        nombre_circuito_final: circ.description || '',
+                        seccion: circ.seccion || 2.5,
+                        num_polos: circ.poles || 2,
+                        calibre_A: circ.amperage || 16,
+                        uso_base: circ.uso_base || 'Otros',
+                        nombre_circuito_usuario: circ.nombre_circuito_usuario || null,
+                        etiqueta_texto: circ.description || (circ.uso_base || 'Otros'),
+                        hijos: []
+                    };
+                    mtNode.hijos.push(finalNode);
+                });
+            } else {
+                // Standalone Magnetothermic (PIA)
+                const mtNode: Device = {
+                    id: `mt-${Math.random().toString(36).substr(2, 9)}`,
+                    tipo: 'magnetotermico',
+                    num_polos: comp.poles || 2,
+                    calibre_A: comp.amperage || 16,
+                    etiqueta_texto: `PIA ${comp.poles || 2}P ${comp.amperage || 16}A`,
+                    hijos: []
+                };
+                parent.hijos.push(mtNode);
 
                 const finalNode: Device = {
-                    id_dispositivo: `final-${Math.random().toString(36).substr(2, 9)}`,
+                    id: `final-${Math.random().toString(36).substr(2, 9)}`,
                     tipo: 'final_circuito',
-                    nombre_circuito_final: circ.description,
-                    seccion: circ.seccion || 2.5,
-                    num_polos: circ.poles,
-                    calibre_A: circ.amperage,
-                    uso_base: circ.uso_base || 'Otros',
-                    etiqueta_texto: circ.description || (circ.uso_base || 'Otros'),
+                    nombre_circuito_final: comp.description || '',
+                    seccion: comp.seccion || 2.5,
+                    num_polos: comp.poles || 2,
+                    calibre_A: comp.amperage || 16,
+                    uso_base: comp.uso_base || 'Otros',
+                    nombre_circuito_usuario: comp.nombre_circuito_usuario || null,
+                    etiqueta_texto: comp.description || (comp.uso_base || 'Otros'),
                     hijos: []
                 };
                 mtNode.hijos.push(finalNode);
-            });
+            }
         });
     }
 
@@ -223,41 +256,66 @@ export function convertTreeToFlat(dispositivos: Device[]): any {
             poles: iga?.num_polos || 2,
             amperage: iga?.calibre_A || 40
         },
-        differentials: []
+        components: [] // polymorphic list
     };
 
-    const traverseForDiffs = (node: Device) => {
-        if (node.tipo === 'diferencial') {
-            const circuits: any[] = [];
+    if (iga && Array.isArray(iga.hijos)) {
+        iga.hijos.forEach(compNode => {
+            if (compNode.tipo === 'diferencial') {
+                const circuits: any[] = [];
+                const findFinals = (n: Device) => {
+                    if (n.tipo === 'final_circuito') {
+                        circuits.push({
+                            poles: n.num_polos || 2,
+                            amperage: n.calibre_A || 16,
+                            description: n.nombre_circuito_final || '',
+                            seccion: n.seccion || 2.5,
+                            uso_base: n.uso_base || 'Otros',
+                            nombre_circuito_usuario: n.nombre_circuito_usuario || null
+                        });
+                    } else if (n.hijos) {
+                        n.hijos.forEach(findFinals);
+                    }
+                };
+                compNode.hijos?.forEach(findFinals);
 
-            const traverseForFinals = (n: any) => {
-                if (n.tipo === 'final_circuito') {
-                    circuits.push({
-                        poles: n.num_polos || 2,
-                        amperage: n.calibre_A || 16,
-                        description: n.nombre_circuito_final || '',
-                        seccion: n.seccion || 2.5,
-                        uso_base: n.uso_base || 'Otros'
-                    });
-                } else if (n.hijos) {
-                    n.hijos.forEach(traverseForFinals);
-                }
-            };
+                flatCuadro.components.push({
+                    tipo: 'ID',
+                    poles: compNode.num_polos || 2,
+                    amperage: compNode.calibre_A || 40,
+                    sensitivity: compNode.sensibilidad_mA || 30,
+                    type_id: compNode.tipo_diferencial || 'AC',
+                    circuits
+                });
+            } else if (compNode.tipo === 'magnetotermico') {
+                // Standalone PIA
+                let finalInfo: any = {};
+                const findFinal = (n: Device) => {
+                    if (n.tipo === 'final_circuito') {
+                        finalInfo = {
+                            description: n.nombre_circuito_final || '',
+                            seccion: n.seccion || 2.5,
+                            uso_base: n.uso_base || 'Otros',
+                            nombre_circuito_usuario: n.nombre_circuito_usuario || null
+                        };
+                    } else if (n.hijos) {
+                        n.hijos.forEach(findFinal);
+                    }
+                };
+                findFinal(compNode);
 
-            node.hijos?.forEach(traverseForFinals);
+                flatCuadro.components.push({
+                    tipo: 'PIA',
+                    poles: compNode.num_polos || 2,
+                    amperage: compNode.calibre_A || 16,
+                    ...finalInfo
+                });
+            }
+        });
+    }
 
-            flatCuadro.differentials.push({
-                poles: node.num_polos || 2,
-                amperage: node.calibre_A || 40,
-                sensitivity: node.sensibilidad_mA || 30,
-                description: node.etiqueta_texto || '',
-                circuits
-            });
-        } else if (node.hijos) {
-            node.hijos.forEach(traverseForDiffs);
-        }
-    };
+    // Maintain 'differentials' for backward compatibility if needed by other components
+    flatCuadro.differentials = flatCuadro.components.filter((c: any) => c.tipo === 'ID');
 
-    dispositivos.forEach(traverseForDiffs);
     return flatCuadro;
 }
