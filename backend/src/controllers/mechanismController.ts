@@ -66,6 +66,25 @@ export const createProject = async (req: Request, res: Response) => {
     }
 };
 
+export const updateProject = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { name, description } = req.body;
+
+        const project = await prisma.mechanismProject.update({
+            where: { id },
+            data: {
+                name,
+                description
+            }
+        });
+
+        res.json(project);
+    } catch (error) {
+        res.status(500).json({ error: 'Error updating project' });
+    }
+};
+
 export const deleteProject = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;

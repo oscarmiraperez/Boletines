@@ -143,6 +143,65 @@ export default function RoomList() {
     if (loading) return <div className="text-center py-10 text-slate-500">Cargando...</div>;
     if (!project) return <div className="text-center py-10 text-red-500">Proyecto no encontrado</div>;
 
+    // Empty State
+    if (project.rooms.length === 0) {
+        return (
+            <div className="space-y-6 pb-20">
+                <div className="flex flex-col gap-4">
+                    <button
+                        onClick={() => navigate('/mecanismos')}
+                        className="flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors w-fit"
+                    >
+                        <ArrowLeft size={18} />
+                        <span>Volver a Proyectos</span>
+                    </button>
+                    <h1 className="text-2xl font-bold text-slate-100">{project.name}</h1>
+                </div>
+
+                <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-slate-800 rounded-xl bg-slate-900/30">
+                    <div className="h-16 w-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-slate-500">
+                        <Plus size={32} />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-200">No hay estancias creadas</h3>
+                    <p className="text-slate-500 max-w-xs mt-2 mb-6">Empieza añadiendo habitaciones, cocina, salón...</p>
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-6 py-3 rounded-lg font-bold transition-all transform hover:scale-105"
+                    >
+                        Añadir Primera Estancia
+                    </button>
+                </div>
+
+                {/* Keep Modals available even in empty state */}
+                {isAddModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-6">
+                            <h2 className="text-xl font-bold text-slate-100 mb-4">Añadir Estancia</h2>
+                            <form onSubmit={handleCreateRoom} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Nombre</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={newRoomName}
+                                        onChange={(e) => setNewRoomName(e.target.value)}
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500"
+                                        placeholder="Ej: Dormitorio 1"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="flex gap-3 pt-4">
+                                    <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 btn-secondary">Cancelar</button>
+                                    <button type="submit" className="flex-1 btn-primary bg-amber-500 text-slate-900 hover:bg-amber-400">Crear</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6 pb-20">
             {/* Header */}

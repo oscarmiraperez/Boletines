@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/authMiddleware';
 import {
     getProjects,
     createProject,
+    updateProject,
     getProjectDetails,
     deleteProject,
     createRoom,
@@ -21,6 +22,7 @@ router.use(authenticateToken);
 // Projects
 router.get('/projects', getProjects);
 router.post('/projects', createProject);
+router.put('/projects/:id', updateProject);
 router.get('/projects/:id', getProjectDetails);
 router.delete('/projects/:id', deleteProject);
 

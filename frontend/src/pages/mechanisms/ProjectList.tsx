@@ -1,8 +1,8 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, ChevronRight, Folder } from 'lucide-react';
-import { getMechanismProjects, createMechanismProject, deleteMechanismProject } from '../../api';
+import { Plus, Trash2, ChevronRight, Folder, Edit2 } from 'lucide-react';
+import { getMechanismProjects, createMechanismProject, deleteMechanismProject, updateMechanismProject } from '../../api';
 
 interface Project {
     id: string;
@@ -17,9 +17,18 @@ interface Project {
 export default function ProjectList() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Create Modal
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectDesc, setNewProjectDesc] = useState('');
+
+    // Edit Modal
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editProjectId, setEditProjectId] = useState<string | null>(null);
+    const [editProjectName, setEditProjectName] = useState('');
+    const [editProjectDesc, setEditProjectDesc] = useState('');
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -41,14 +50,29 @@ export default function ProjectList() {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await createMechanismProject({ name: newProjectName, description: newProjectDesc });
+            const newProject = await createMechanismProject({ name: newProjectName, description: newProjectDesc });
             setNewProjectName('');
             setNewProjectDesc('');
-            setIsModalOpen(false);
-            loadProjects();
+            setIsCreateModalOpen(false);
+            // Auto navigate to the new project
+            navigate(`/mecanismos/${newProject.id}`);
         } catch (error) {
             console.error(error);
             alert('Error al crear proyecto');
+        }
+    };
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editProjectId) return;
+        try {
+            await updateMechanismProject(editProjectId, { name: editProjectName, description: editProjectDesc });
+            setEditProjectId(null);
+            setIsEditModalOpen(false);
+            loadProjects();
+        } catch (error) {
+            console.error(error);
+            alert('Error al actualizar proyecto');
         }
     };
 
@@ -61,8 +85,16 @@ export default function ProjectList() {
             loadProjects();
         } catch (error) {
             console.error(error);
-            alert('Error al crear el proyecto. Por favor, intenta iniciar sesión de nuevo.');
+            alert('Error al borrar el proyecto');
         }
+    };
+
+    const openEditModal = (e: React.MouseEvent, project: Project) => {
+        e.stopPropagation();
+        setEditProjectId(project.id);
+        setEditProjectName(project.name);
+        setEditProjectDesc(project.description || '');
+        setIsEditModalOpen(true);
     };
 
     return (
@@ -73,7 +105,7 @@ export default function ProjectList() {
                     <p className="text-slate-400 mt-1">Gestión de contadores de material</p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => setIsCreateModalOpen(true)}
                     className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors"
                 >
                     <Plus size={20} />
@@ -112,6 +144,12 @@ export default function ProjectList() {
 
                             <div className="flex items-center gap-2">
                                 <button
+                                    onClick={(e) => openEditModal(e, project)}
+                                    className="p-2 text-slate-500 hover:text-sky-400 hover:bg-sky-950/30 rounded-lg transition-colors"
+                                >
+                                    <Edit2 size={18} />
+                                </button>
+                                <button
                                     onClick={(e) => handleDelete(e, project.id)}
                                     className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-colors"
                                 >
@@ -131,7 +169,7 @@ export default function ProjectList() {
             )}
 
             {/* CREATE MODAL */}
-            {isModalOpen && (
+            {isCreateModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                     <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-6 shadow-2xl">
                         <h2 className="text-xl font-bold text-slate-100 mb-4">Nuevo Proyecto</h2>
@@ -145,6 +183,7 @@ export default function ProjectList() {
                                     onChange={(e) => setNewProjectName(e.target.value)}
                                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500"
                                     placeholder="Ej: Reforma Piso Centro"
+                                    autoFocus
                                 />
                             </div>
                             <div>
@@ -160,7 +199,7 @@ export default function ProjectList() {
                             <div className="flex gap-3 pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setIsModalOpen(false)}
+                                    onClick={() => setIsCreateModalOpen(false)}
                                     className="flex-1 px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 font-medium"
                                 >
                                     Cancelar
@@ -170,6 +209,52 @@ export default function ProjectList() {
                                     className="flex-1 px-4 py-2 bg-amber-500 text-slate-900 rounded-lg hover:bg-amber-400 font-medium"
                                 >
                                     Crear Proyecto
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* EDIT MODAL */}
+            {isEditModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-6 shadow-2xl">
+                        <h2 className="text-xl font-bold text-slate-100 mb-4">Editar Proyecto</h2>
+                        <form onSubmit={handleUpdate} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Nombre</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={editProjectName}
+                                    onChange={(e) => setEditProjectName(e.target.value)}
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500"
+                                    autoFocus
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Descripción (Opcional)</label>
+                                <input
+                                    type="text"
+                                    value={editProjectDesc}
+                                    onChange={(e) => setEditProjectDesc(e.target.value)}
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="flex-1 px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2 bg-amber-500 text-slate-900 rounded-lg hover:bg-amber-400 font-medium"
+                                >
+                                    Guardar Cambios
                                 </button>
                             </div>
                         </form>
