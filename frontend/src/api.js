@@ -1,10 +1,6 @@
 export const API_URL = import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
 
-interface RequestOptions extends RequestInit {
-    token?: string;
-}
-
-export const apiRequest = async (endpoint: string, options: RequestOptions = {}) => {
+export const apiRequest = async (endpoint, options = {}) => {
     const token = localStorage.getItem('token');
 
     const headers = {
@@ -40,15 +36,15 @@ export const apiRequest = async (endpoint: string, options: RequestOptions = {})
 
 // User Management API
 export const getUsers = () => apiRequest('/users');
-export const createUser = (data: any) => apiRequest('/users', {
+export const createUser = (data) => apiRequest('/users', {
     method: 'POST',
     body: JSON.stringify(data)
 });
-export const updateUser = (id: string, data: any) => apiRequest(`/users/${id}`, {
+export const updateUser = (id, data) => apiRequest(`/users/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data)
 });
-export const deleteUser = (id: string) => apiRequest(`/users/${id}`, {
+export const deleteUser = (id) => apiRequest(`/users/${id}`, {
     method: 'DELETE'
 });
 
@@ -56,48 +52,48 @@ export const exportData = () => apiRequest('/admin/export', {
     method: 'GET'
 });
 
-export const importData = (data: any) => apiRequest('/admin/import', {
+export const importData = (data) => apiRequest('/admin/import', {
     method: 'POST',
     body: JSON.stringify(data)
 });
 
 // Mechanisms API
 export const getMechanismProjects = () => apiRequest('/mechanisms/projects');
-export const createMechanismProject = (data: { name: string; description?: string }) => apiRequest('/mechanisms/projects', {
+export const createMechanismProject = (data) => apiRequest('/mechanisms/projects', {
     method: 'POST',
     body: JSON.stringify(data)
 });
-export const updateMechanismProject = (id: string, data: any) => apiRequest(`/mechanisms/projects/${id}`, {
+export const updateMechanismProject = (id, data) => apiRequest(`/mechanisms/projects/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data)
 });
-export const getMechanismProjectDetails = (id: string) => apiRequest(`/mechanisms/projects/${id}`);
-export const deleteMechanismProject = (id: string) => apiRequest(`/mechanisms/projects/${id}`, {
+export const getMechanismProjectDetails = (id) => apiRequest(`/mechanisms/projects/${id}`);
+export const deleteMechanismProject = (id) => apiRequest(`/mechanisms/projects/${id}`, {
     method: 'DELETE'
 });
 
-export const createMechanismRoom = (data: { projectId: string; name: string; count?: number }) => apiRequest('/mechanisms/rooms', {
+export const createMechanismRoom = (data) => apiRequest('/mechanisms/rooms', {
     method: 'POST',
     body: JSON.stringify(data)
 });
-export const updateMechanismRoom = (id: string, data: { name: string }) => apiRequest(`/mechanisms/rooms/${id}`, {
+export const updateMechanismRoom = (id, data) => apiRequest(`/mechanisms/rooms/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data)
 });
-export const deleteMechanismRoom = (id: string) => apiRequest(`/mechanisms/rooms/${id}`, {
+export const deleteMechanismRoom = (id) => apiRequest(`/mechanisms/rooms/${id}`, {
     method: 'DELETE'
 });
-export const copyMechanismRoom = (data: { roomId: string; count: number }) => apiRequest('/mechanisms/rooms/copy', {
+export const copyMechanismRoom = (data) => apiRequest('/mechanisms/rooms/copy', {
     method: 'POST',
     body: JSON.stringify(data)
 });
 
-export const upsertMechanismItem = (data: { roomId: string; name: string; quantity: number }) => apiRequest('/mechanisms/items', {
+export const upsertMechanismItem = (data) => apiRequest('/mechanisms/items', {
     method: 'POST',
     body: JSON.stringify(data)
 });
 
-export const generateMechanismProjectPDF = async (projectId: string) => {
+export const generateMechanismProjectPDF = async (projectId) => {
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_URL}/mechanisms/projects/${projectId}/pdf`, {
         method: 'POST',
