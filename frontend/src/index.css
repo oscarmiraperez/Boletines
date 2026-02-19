@@ -1,67 +1,60 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #00d2ff;
+  overflow-x: hidden;
+}
 
-@layer base {
+#root {
+  width: 100%;
+}
 
-  /* Prevent iOS zoom on inputs */
-  @media screen and (max-width: 768px) {
+.wave-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: linear-gradient(180deg, #1a3c5a 0%, #00d2ff 100%);
+  overflow: hidden;
+}
 
-    input,
-    select,
-    textarea {
-      font-size: 16px !important;
-    }
+.wave {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 210, 255, 0.2) 0%, transparent 50%);
+  animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
   }
 
-  body {
-    @apply bg-slate-950 text-slate-50 antialiased;
-  }
-
-  /* Custom Scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-slate-900;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-slate-700 rounded-full border-2 border-slate-900;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-600;
-  }
-
-  /* Autofill styling fix for dark mode */
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover,
-  input:-webkit-autofill:focus,
-  input:-webkit-autofill:active {
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: #ffffff;
-    transition: background-color 5000s ease-in-out 0s;
-    box-shadow: inset 0 0 20px 20px #0f172a29;
+  to {
+    transform: rotate(360deg);
   }
 }
 
-/* Fix for Select dropdowns in dark mode */
-select option {
-  background-color: #0f172a;
-  /* slate-950 */
-  color: #f8fafc;
-  /* slate-50 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  transition: all 0.3s ease;
 }
 
-/* Utility to hide scrollbar but keep functionality */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-5px);
 }
 
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+* {
+  box-sizing: border-box;
 }
