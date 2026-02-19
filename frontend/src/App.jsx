@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings, Zap, Thermometer, Radio, Cloud, Users, Trash2, Edit2, X, Save, Phone, Mail, Lock, ShieldCheck } from 'lucide-react';
 import ElectricityMenu from './ElectricityMenu';
 import ClimaMenu from './ClimaMenu';
@@ -6,7 +6,19 @@ import TelecomMenu from './TelecomMenu';
 
 const App = () => {
     // --- ESTADOS ---
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [isAdminOpen, setIsAdminOpen] = useState(false);
+
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
     const [currentView, setCurrentView] = useState('home');
     const [tecnicos, setTecnicos] = useState([
         {
@@ -146,7 +158,10 @@ const App = () => {
                 </div>
             </div>
 
-            <div style={styles.offlineStatus}><Cloud size={16} /> Modo Offline: Activo</div>
+            <div style={styles.offlineStatus}>
+                <Cloud size={16} color={isOnline ? "#00ff00" : "#ff4444"} />
+                {isOnline ? "Modo Online: Activo" : "Modo Offline: Activo"}
+            </div>
 
             <div style={styles.actionGrid}>
                 <div className="glass-card" style={styles.mainCard} onClick={() => setCurrentView('electricity')}>
